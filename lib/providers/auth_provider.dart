@@ -60,6 +60,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Aksi Login Google
+  Future<bool> loginWithGoogle() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final success = await _authService.signInWithGoogle();
+      _setLoading(false);
+      return success;
+    } on AuthException catch (e) {
+      _errorMessage = e.message;
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      _errorMessage = 'Terjadi kesalahan OAuth';
+      _setLoading(false);
+      return false;
+    }
+  }
+
   // Aksi Logout
   Future<void> logout() async {
     await _authService.signOut();

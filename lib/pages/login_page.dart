@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../widget/custom_input_field.dart';
 
@@ -15,9 +17,26 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Mendengarkan perubahan status autentikasi (berguna untuk menangkap callback dari deep link OAuth)
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
+      if (event == AuthChangeEvent.signedIn && session != null) {
+        if (mounted) {
+          context.go('/home');
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _authSubscription.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -31,15 +50,23 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
 
-      if (mounted) {
-        if (success) {
-          context.go('/home');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(authProvider.errorMessage ?? 'Login Gagal')),
-          );
-        }
+      if (mounted && !success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authProvider.errorMessage ?? 'Login Gagal')),
+        );
       }
+      // Jika sukses, navigasi otomatis di-handle oleh onAuthStateChange di initState
+    }
+  }
+
+  void _handleGoogleLogin() async {
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.loginWithGoogle();
+    
+    if (mounted && !success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? 'Google Login Gagal')),
+      );
     }
   }
 
@@ -73,14 +100,31 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 32),
               authProvider.isLoading
                   ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Masuk'),
+                  : Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Masuk'),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('ATAU', style: TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: _handleGoogleLogin,
+                          icon: const Icon(Icons.g_mobiledata, size: 28),
+                          label: const Text('Continue with Google'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
                     ),
+              const SizedBox(height: 16),
               TextButton(
                 onPressed: () => context.go('/register'),
                 child: const Text('Belum punya akun? Daftar sekarang'),

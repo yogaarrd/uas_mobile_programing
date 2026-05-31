@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../widget/custom_input_field.dart';
 
@@ -16,9 +18,25 @@ class _RegisterPageState extends State<RegisterPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
+      if (event == AuthChangeEvent.signedIn && session != null) {
+        if (mounted) {
+          context.go('/home');
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _authSubscription.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -37,7 +55,7 @@ class _RegisterPageState extends State<RegisterPage> {
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registrasi Berhasil! Silakan periksa email untuk verifikasi.')),
+            const SnackBar(content: Text('Registrasi Berhasil! Silakan masuk.')),
           );
           context.go('/login');
         } else {
@@ -46,6 +64,17 @@ class _RegisterPageState extends State<RegisterPage> {
           );
         }
       }
+    }
+  }
+
+  void _handleGoogleLogin() async {
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.loginWithGoogle();
+    
+    if (mounted && !success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? 'Google Login Gagal')),
+      );
     }
   }
 
@@ -86,14 +115,31 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 32),
                 authProvider.isLoading
                     ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: _handleRegister,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Daftar'),
+                    : Column(
+                        children: [
+                          ElevatedButton(
+                            onPressed: _handleRegister,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Daftar'),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('ATAU', style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _handleGoogleLogin,
+                            icon: const Icon(Icons.g_mobiledata, size: 28),
+                            label: const Text('Continue with Google'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ],
                       ),
+                const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => context.go('/login'),
                   child: const Text('Sudah punya akun? Login disini'),
