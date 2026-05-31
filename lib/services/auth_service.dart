@@ -30,6 +30,14 @@ class AuthService {
     );
   }
 
+  // Fitur Login dengan Google OAuth
+  Future<bool> signInWithGoogle() async {
+    return await _supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'io.supabase.gymapp://login-callback/', // Deep link callback
+    );
+  }
+
   // Fitur Logout
   Future<void> signOut() async {
     await _supabase.auth.signOut();
