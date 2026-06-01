@@ -8,6 +8,7 @@ import 'providers/auth_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/home_page.dart';
+import 'pages/splash_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,8 +24,9 @@ Future<void> main() async {
 
 // Konfigurasi Rute Aplikasi
 final GoRouter _router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/', // Mengubah lokasi awal ke halaman Splash Screen
   routes: [
+    GoRoute(path: '/', builder: (context, state) => const SplashPage()),
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
     GoRoute(path: '/home', builder: (context, state) => const HomePage()),
