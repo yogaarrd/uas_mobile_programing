@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
-import '../widget/custom_input_field.dart';
+import '../../../shared/widgets/custom_input_field.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

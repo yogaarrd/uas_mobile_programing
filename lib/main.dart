@@ -3,12 +3,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // 1. Tetap pastikan Riverpod terimport
 
-import 'providers/auth_provider.dart';
-import 'pages/login_page.dart';
-import 'pages/register_page.dart';
-import 'pages/home_page.dart';
-import 'pages/splash_page.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/auth/pages/login_page.dart';
+import 'features/auth/pages/register_page.dart';
+import 'features/auth/pages/splash_page.dart';
+import 'features/home/pages/home_page.dart'; // 2. KOREKSI: Jalur import HomePage disesuaikan dengan folder baru
+import 'core/navigation/main_wrapper.dart'; // 3. Pastikan MainWrapper terimport untuk rute navigasi
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,17 +21,21 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  runApp(const MyApp());
+  // 4. KOREKSI: MyApp wajib dibungkus ProviderScope agar state management Riverpod aktif secara global
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 // Konfigurasi Rute Aplikasi
 final GoRouter _router = GoRouter(
-  initialLocation: '/', // Mengubah lokasi awal ke halaman Splash Screen
+  initialLocation: '/', 
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashPage()),
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
-    GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+    
+    // 5. KOREKSI: Ubah tujuan rute /home dari HomePage menuju ke MainWrapper
+    // Ini krusial agar saat aplikasi masuk ke halaman utama, Bottom Navigation Bar langsung ikut tampil
+    GoRoute(path: '/home', builder: (context, state) => const MainWrapper()),
   ],
 );
 
@@ -38,6 +44,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // MultiProvider bawaan temanmu tetap dipertahankan utuh agar fitur autentikasi tidak rusak
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
