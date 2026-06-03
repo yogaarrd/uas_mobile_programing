@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'bottom_nav_provider.dart';
-import '../../features/home/pages/home_page.dart'; // Import halaman buatan temanmu
+import '../../features/home/pages/home_page.dart';
+import '../../features/workout/pages/history_page.dart'; // Import halamanmu
+import '../../features/workout/pages/progress_page.dart';
+import '../../features/profile/pages/profile_page.dart';
+import '../../core/theme/app_theme.dart'; // Import AppTheme kita
 
 class MainWrapper extends ConsumerWidget {
   const MainWrapper({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Pantau tab mana yang sedang aktif
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
-    // Daftar halaman untuk setiap tab
     final List<Widget> pages = const [
-      HomePage(), // Index 0: Fitur Home temanmu
-      Center(child: Text("History")), // Index 1: Placeholder History
-      Center(child: Text("Progress")), // Index 2: Placeholder Progress
-      Center(child: Text("Profile")), // Index 3: Placeholder Profile
+      HomePage(),
+      HistoryPage(),
+      ProgressPage(),
+      ProfilePage(),
     ];
 
     return Scaffold(
@@ -24,8 +26,9 @@ class MainWrapper extends ConsumerWidget {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.black,
-        selectedItemColor: Colors.blueAccent,
+        // Gunakan warna dari AppTheme kita!
+        backgroundColor: AppTheme.surfaceColor,
+        selectedItemColor: AppTheme.neonGreen,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
           ref.read(bottomNavIndexProvider.notifier).changeIndex(index);

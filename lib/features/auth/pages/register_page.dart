@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../../../shared/widgets/custom_input_field.dart';
-// 1. TAMBAHKAN IMPORT CUSTOM BUTTON DI SINI
 import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/global_feedback.dart'; // Import feedback global
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -54,36 +54,40 @@ class _RegisterPageState extends State<RegisterPage> {
         _nameController.text.trim(),
       );
 
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registrasi Berhasil! Silakan masuk.')),
-          );
-          context.go('/login');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(authProvider.errorMessage ?? 'Registrasi Gagal')),
-          );
-        }
+      if (mounted && success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registrasi Berhasil!')),
+        );
+        context.go('/login');
       }
     }
   }
 
   void _handleGoogleLogin() async {
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.loginWithGoogle();
-    
-    if (mounted && !success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.errorMessage ?? 'Google Login Gagal')),
-      );
-    }
+    await authProvider.loginWithGoogle();
   }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
 
+    // 1. Error State
+    if (authProvider.errorMessage != null) {
+      return Scaffold(
+        body: GlobalFeedback.errorMessage(
+          authProvider.errorMessage!,
+          () => _handleRegister(),
+        ),
+      );
+    }
+
+    // 2. Loading State
+    if (authProvider.isLoading) {
+      return Scaffold(body: GlobalFeedback.loadingIndicator());
+    }
+
+    // 3. UI Utama
     return Scaffold(
       appBar: AppBar(title: const Text('Buat Akun Baru')),
       body: Padding(
@@ -115,30 +119,27 @@ class _RegisterPageState extends State<RegisterPage> {
                   validator: (v) => v!.length < 6 ? 'Password minimal 6 karakter' : null,
                 ),
                 const SizedBox(height: 32),
-                authProvider.isLoading
-                    ? const CircularProgressIndicator()
-                    : Column(
-                        children: [
-                          // 2. GANTI ELEVATED BUTTON DENGAN CUSTOM BUTTON
-                          CustomButton(
-                            text: 'Daftar',
-                            onPressed: _handleRegister,
-                          ),
-                          // ===========================================
-                          const SizedBox(height: 16),
-                          const Text('ATAU', style: TextStyle(color: Colors.grey)),
-                          const SizedBox(height: 16),
-                          OutlinedButton.icon(
-                            onPressed: _handleGoogleLogin,
-                            icon: const Icon(Icons.g_mobiledata, size: 28),
-                            label: const Text('Continue with Google'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(50),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                        ],
-                      ),
+                
+                // Tombol Daftar
+                CustomButton(
+                  text: 'Daftar',
+                  onPressed: _handleRegister,
+                  isLoading: authProvider.isLoading,
+                ),
+                
+                const SizedBox(height: 16),
+                const Text('ATAU', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 16),
+                
+                OutlinedButton.icon(
+                  onPressed: _handleGoogleLogin,
+                  icon: const Icon(Icons.g_mobiledata, size: 28),
+                  label: const Text('Continue with Google'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => context.go('/login'),

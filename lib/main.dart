@@ -3,16 +3,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // 1. Tetap pastikan Riverpod terimport
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/pages/login_page.dart';
 import 'features/auth/pages/register_page.dart';
 import 'features/auth/pages/splash_page.dart';
-import 'features/home/pages/home_page.dart'; // 2. KOREKSI: Jalur import HomePage disesuaikan dengan folder baru
-import 'core/navigation/main_wrapper.dart'; // 3. Pastikan MainWrapper terimport untuk rute navigasi
+import 'features/home/pages/home_page.dart'; 
+import 'core/navigation/main_wrapper.dart'; 
+import 'core/theme/app_theme.dart'; 
 
-import 'core/theme/app_theme.dart'; // 6. KOREKSI: Pastikan AppTheme terimport untuk digunakan di MaterialApp
+// === IMPORT INI DITAMBAHKAN UNTUK INF-03 ===
+import 'shared/widgets/global_feedback.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +25,27 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  // 4. KOREKSI: MyApp wajib dibungkus ProviderScope agar state management Riverpod aktif secara global
+ 
+  // Menangkap error UI secara global agar terhindar dari Red Screen of Death
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    // Print error asli di terminal untuk keperluan debug developer
+    debugPrint(details.exceptionAsString()); 
+    
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: AppTheme.darkBackground, // Menggunakan warna dari tema
+        body: GlobalFeedback.errorMessage(
+          'Ups! Ada yang salah dengan tampilan ini.\nTim kami akan segera memperbaikinya.',
+          () {
+            // Bisa dikosongkan, atau biarkan user klik tapi tidak melakukan apa-apa 
+            // karena ini error fatal pada UI, bukan pada koneksi data.
+          },
+        ),
+      ),
+    );
+  };
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -34,9 +56,6 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const SplashPage()),
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
-    
-    // 5. KOREKSI: Ubah tujuan rute /home dari HomePage menuju ke MainWrapper
-    // Ini krusial agar saat aplikasi masuk ke halaman utama, Bottom Navigation Bar langsung ikut tampil
     GoRoute(path: '/home', builder: (context, state) => const MainWrapper()),
   ],
 );
@@ -46,7 +65,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // MultiProvider bawaan temanmu tetap dipertahankan utuh agar fitur autentikasi tidak rusak
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
