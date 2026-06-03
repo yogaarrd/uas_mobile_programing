@@ -2,20 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../auth/providers/auth_provider.dart';
-// 1. Import AppSizes untuk jarak konsisten
 import '../../../core/theme/app_sizes.dart';
-// 2. Import CustomButton buatanmu
 import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/global_feedback.dart'; // Import ini wajib
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Memantau status dari AuthProvider
     final authProvider = context.watch<AuthProvider>();
+
+    // 1. Error Handling State
+    // Jika ada error saat memuat data, tampilkan widget error global
+    if (authProvider.errorMessage != null) {
+      return Scaffold(
+        body: GlobalFeedback.errorMessage(authProvider.errorMessage!, () {
+          // Logika untuk retry (bisa disesuaikan dengan fungsi fetch data kamu)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Mencoba memuat ulang...')),
+          );
+        }),
+      );
+    }
+
+    // 2. Loading State
+    // Jika aplikasi sedang sibuk memuat data, tampilkan loading indikator global
+    if (authProvider.isLoading) {
+      return Scaffold(body: GlobalFeedback.loadingIndicator());
+    }
+
+    // 3. Main Content (Success State)
     final userEmail = authProvider.user?.email ?? 'Pengguna';
-    
-    // 3. Ambil TextTheme dari app_theme.dart yang sedang aktif
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -30,12 +49,11 @@ class HomePage extends StatelessWidget {
                 context.go('/login');
               }
             },
-          )
+          ),
         ],
       ),
       body: Center(
         child: Padding(
-          // Gunakan AppSizes untuk padding
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.spaceLarge),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -43,16 +61,16 @@ class HomePage extends StatelessWidget {
               Text(
                 'Selamat Datang,\n$userEmail',
                 textAlign: TextAlign.center,
-                style: textTheme.headlineLarge, // Gunakan font besar dari tema
+                style: textTheme.headlineLarge,
               ),
-              const SizedBox(height: AppSizes.spaceMedium), // Gunakan jarak dari AppSizes
+              const SizedBox(height: AppSizes.spaceMedium),
               Text(
                 'Siap untuk memulai latihan hari ini?',
-                style: textTheme.bodyLarge, // Gunakan font reguler dari tema
+                style: textTheme.bodyLarge,
               ),
-              const SizedBox(height: AppSizes.spaceXLarge), // Jarak yang lebih besar sebelum tombol
-              
-              // 4. Tombol yang sudah menggunakan Design System
+              const SizedBox(height: AppSizes.spaceXLarge),
+
+              // Custom Button yang bersih
               CustomButton(
                 text: 'GAS LATIHAN!',
                 onPressed: () {
