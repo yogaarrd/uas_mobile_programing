@@ -12,6 +12,8 @@ import 'features/auth/pages/splash_page.dart';
 import 'features/home/pages/home_page.dart'; // 2. KOREKSI: Jalur import HomePage disesuaikan dengan folder baru
 import 'core/navigation/main_wrapper.dart'; // 3. Pastikan MainWrapper terimport untuk rute navigasi
 
+import 'core/theme/app_theme.dart'; // 6. KOREKSI: Pastikan AppTheme terimport untuk digunakan di MaterialApp
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -51,7 +53,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'GymApp',
-        theme: ThemeData.dark(), 
+        theme: AppTheme.darkTheme, 
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
       ),

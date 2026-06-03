@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../../../shared/widgets/custom_input_field.dart';
+// 1. TAMBAHKAN IMPORT CUSTOM BUTTON DI SINI
+import '../../../shared/widgets/custom_button.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,7 +24,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    // Mendengarkan perubahan status autentikasi (berguna untuk menangkap callback dari deep link OAuth)
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
@@ -55,7 +56,6 @@ class _LoginPageState extends State<LoginPage> {
           SnackBar(content: Text(authProvider.errorMessage ?? 'Login Gagal')),
         );
       }
-      // Jika sukses, navigasi otomatis di-handle oleh onAuthStateChange di initState
     }
   }
 
@@ -102,14 +102,12 @@ class _LoginPageState extends State<LoginPage> {
                   ? const CircularProgressIndicator()
                   : Column(
                       children: [
-                        ElevatedButton(
+                        // 2. GANTI ELEVATED BUTTON DENGAN CUSTOM BUTTON
+                        CustomButton(
+                          text: 'Masuk',
                           onPressed: _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Masuk'),
                         ),
+                        // ===========================================
                         const SizedBox(height: 16),
                         const Text('ATAU', style: TextStyle(color: Colors.grey)),
                         const SizedBox(height: 16),
