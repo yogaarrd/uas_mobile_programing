@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../../../shared/widgets/custom_input_field.dart';
+// 1. TAMBAHKAN IMPORT CUSTOM BUTTON DI SINI
+import '../../../shared/widgets/custom_button.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -117,14 +119,12 @@ class _RegisterPageState extends State<RegisterPage> {
                     ? const CircularProgressIndicator()
                     : Column(
                         children: [
-                          ElevatedButton(
+                          // 2. GANTI ELEVATED BUTTON DENGAN CUSTOM BUTTON
+                          CustomButton(
+                            text: 'Daftar',
                             onPressed: _handleRegister,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(50),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text('Daftar'),
                           ),
+                          // ===========================================
                           const SizedBox(height: 16),
                           const Text('ATAU', style: TextStyle(color: Colors.grey)),
                           const SizedBox(height: 16),
