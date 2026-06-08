@@ -1,3 +1,20 @@
+-- Buat Enum dulu
+create type public.muscle_group_enum as enum (
+  'chest',
+  'back',
+  'legs',
+  'shoulders',
+  'arms',
+  'core',
+  'cardio'
+);
+
+create type public.equipment_enum as enum (
+  'bodyweight',
+  'dumbbell',
+  'barbell',
+  'machine'
+);
 
 -- Buat Table
 create table public.exercises (
