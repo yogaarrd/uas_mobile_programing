@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class   ProgressPage extends StatelessWidget {
-  const ProgressPage({super.key});
+class   HistoryPage extends StatelessWidget {
+  const HistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -10,7 +10,7 @@ class   ProgressPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('Progress Latihan', style: textTheme.titleLarge)),
       body: Center(
-        child: Text('Belum ada data progress', style: textTheme.bodyLarge),
+        child: Text('Belum ada data history', style: textTheme.bodyLarge),
       ),
     );
   }
