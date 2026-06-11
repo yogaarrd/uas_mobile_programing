@@ -1,85 +1,184 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../core/theme/app_sizes.dart';
-import '../../../shared/widgets/custom_button.dart';
-import '../../../shared/widgets/global_feedback.dart'; // Import ini wajib
+import '../../../core/theme/app_theme.dart';
+import '../../workout/providers/workout_provider.dart';
+import '../../workout/models/workout_template.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Memantau status dari AuthProvider
-    final authProvider = context.watch<AuthProvider>();
-
-    // 1. Error Handling State
-    // Jika ada error saat memuat data, tampilkan widget error global
-    if (authProvider.errorMessage != null) {
-      return Scaffold(
-        body: GlobalFeedback.errorMessage(authProvider.errorMessage!, () {
-          // Logika untuk retry (bisa disesuaikan dengan fungsi fetch data kamu)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mencoba memuat ulang...')),
-          );
-        }),
-      );
-    }
-
-    // 2. Loading State
-    // Jika aplikasi sedang sibuk memuat data, tampilkan loading indikator global
-    if (authProvider.isLoading) {
-      return Scaffold(body: GlobalFeedback.loadingIndicator());
-    }
-
-    // 3. Main Content (Success State)
-    final userEmail = authProvider.user?.email ?? 'Pengguna';
-    final textTheme = Theme.of(context).textTheme;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Memantau state data workout dari Riverpod
+    final templatesAsync = ref.watch(workoutTemplatesProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
-        title: Text('Beranda GymApp', style: textTheme.titleLarge),
+        backgroundColor: AppTheme.darkBackground,
+        elevation: 0,
+        title: const Text(
+          'My Workouts', 
+          style: TextStyle(fontWeight: FontWeight.bold)
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await context.read<AuthProvider>().logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
+            icon: const Icon(Icons.add, color: AppTheme.neonGreen),
+            onPressed: () => context.push('/create-workout'), // Rute ke builder
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSizes.spaceLarge),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Selamat Datang,\n$userEmail',
-                textAlign: TextAlign.center,
-                style: textTheme.headlineLarge,
-              ),
-              const SizedBox(height: AppSizes.spaceMedium),
-              Text(
-                'Siap untuk memulai latihan hari ini?',
-                style: textTheme.bodyLarge,
-              ),
-              const SizedBox(height: AppSizes.spaceXLarge),
+      body: templatesAsync.when(
+        data: (templates) {
+          if (templates.isEmpty) {
+            return _buildEmptyState(context);
+          }
+          return RefreshIndicator(
+            onRefresh: () async => ref.refresh(workoutTemplatesProvider.future),
+            color: AppTheme.neonGreen,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: templates.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                return _WorkoutTemplateCard(template: templates[index]);
+              },
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.neonGreen)),
+        error: (error, stack) => Center(
+          child: Text('Terjadi kesalahan:\n$error', textAlign: TextAlign.center),
+        ),
+      ),
+    );
+  }
 
-              // Custom Button yang bersih
-              CustomButton(
-                text: 'GAS LATIHAN!',
-                onPressed: () {
-                  print('Mulai tracking latihan... 🔥');
-                },
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.fitness_center, size: 80, color: Colors.grey.withOpacity(0.5)),
+          const SizedBox(height: 16),
+          const Text(
+            'Belum ada template latihan',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => context.push('/create-workout'),
+            icon: const Icon(Icons.add, color: Colors.black),
+            label: const Text('Buat Template Pertama', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.neonGreen,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkoutTemplateCard extends StatelessWidget {
+  final WorkoutTemplate template;
+
+  const _WorkoutTemplateCard({required this.template});
+
+  @override
+  Widget build(BuildContext context) {
+    // Estimasi kasaran: 1 exercise = 10 menit
+    final estimatedTime = template.exerciseCount * 10;
+
+    return Card(
+      color: AppTheme.surfaceColor, // Menggunakan surfaceColor dari AppTheme agar selaras
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              template.name,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            if (template.description != null && template.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                template.description!,
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
+            const SizedBox(height: 16),
+            
+            // Baris Info: Jumlah Exercise & Estimasi Waktu
+            Row(
+              children: [
+                _buildBadge(Icons.format_list_bulleted, '${template.exerciseCount} Latihan'),
+                const SizedBox(width: 16),
+                _buildBadge(Icons.timer_outlined, '~ $estimatedTime mnt'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Menampilkan Otot yang dilatih (Muscle Groups)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: template.muscleGroups.map((m) => _buildMuscleChip(m)).toList(),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Tombol Start Session
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.push('/active-session/${template.id}'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.neonGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Start Workout', 
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 16),
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+      ],
+    );
+  }
+
+  Widget _buildMuscleChip(String muscle) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.neonGreen.withOpacity(0.15),
+        border: Border.all(color: AppTheme.neonGreen.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        muscle.toUpperCase(),
+        style: const TextStyle(color: AppTheme.neonGreen, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

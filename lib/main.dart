@@ -57,6 +57,22 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
     GoRoute(path: '/home', builder: (context, state) => const MainWrapper()),
+
+    // Rute Placeholder (Agar tombol + dan Start tidak crash saat di-klik)
+    GoRoute(
+      path: '/create-workout', 
+      builder: (context, state) => Scaffold(
+        appBar: AppBar(title: const Text('Create Workout')),
+        body: const Center(child: Text('Under Construction: Workout Builder')),
+      ),
+    ),
+    GoRoute(
+      path: '/active-session/:id', 
+      builder: (context, state) => Scaffold(
+        appBar: AppBar(title: const Text('Active Session')),
+        body: Center(child: Text('Under Construction: Session ID ${state.pathParameters['id']}')),
+      ),
+    ),
   ],
 );
 
