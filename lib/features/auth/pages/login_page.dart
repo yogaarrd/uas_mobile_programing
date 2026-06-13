@@ -24,7 +24,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
       if (event == AuthChangeEvent.signedIn && session != null) {
@@ -67,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
       return Scaffold(
         body: GlobalFeedback.errorMessage(
           authProvider.errorMessage!,
-          () => _handleLogin(), 
+          () => _handleLogin(),
         ),
       );
     }
@@ -102,25 +104,27 @@ class _LoginPageState extends State<LoginPage> {
                 validator: (v) => v!.isEmpty ? 'Masukkan password Anda' : null,
               ),
               const SizedBox(height: 32),
-              
+
               // Custom Button dengan state loading yang terintegrasi
               CustomButton(
                 text: 'Masuk',
                 onPressed: _handleLogin,
                 isLoading: authProvider.isLoading,
               ),
-              
+
               const SizedBox(height: 16),
               const Text('ATAU', style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 16),
-              
+
               OutlinedButton.icon(
                 onPressed: _handleGoogleLogin,
                 icon: const Icon(Icons.g_mobiledata, size: 28),
                 label: const Text('Continue with Google'),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
