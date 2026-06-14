@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/exercise_models.dart';
 import '../repositories/workout_repository.dart';
 import 'workout_provider.dart';
+import '../../../core/services/notification_service.dart';
 
 class ActiveSet {
   int reps;
@@ -205,6 +206,10 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
       if (state.restSecondsRemaining > 1) {
         state = state.copyWith(restSecondsRemaining: state.restSecondsRemaining - 1);
       } else {
+        // [FITUR BARU]: Waktu habis secara natural (bukan di-skip)
+        // 1. Panggil notifikasi suara & getar
+        NotificationService.showRestFinishedNotification();
+        // 2. Munculkan splash screen
         _showTransitionSplash(); 
       }
     });

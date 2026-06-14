@@ -19,8 +19,11 @@ import 'core/theme/app_theme.dart';
 
 import 'shared/widgets/global_feedback.dart';
 
+import 'core/services/notification_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
