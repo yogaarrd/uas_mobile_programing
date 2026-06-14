@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../models/workout_builder_models.dart';
 import '../providers/workout_builder_provider.dart';
 import '../widgets/exercise_selection_sheet.dart';
+import '../widgets/exercise_config_card.dart'; // IMPORT WIDGET BARU KITA
 
 class CreateWorkoutPage extends ConsumerStatefulWidget {
   final String? templateId;
@@ -158,188 +158,21 @@ class _CreateWorkoutPageState extends ConsumerState<CreateWorkoutPage> {
           ),
         ),
         itemCount: state.exercises.length,
+        
+        // CUKUP PANGGIL WIDGET REUSABLE DI SINI
         itemBuilder: (context, index) {
           final exData = state.exercises[index];
-          return Card(
+          return ExerciseConfigCard(
             key: ValueKey(exData.uniqueId),
-            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-            color: AppTheme.surfaceColor,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade800),
-              ),
-              child: Column(
-                children: [
-                  // HEADER LATIHAN
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                    decoration: BoxDecoration(color: Colors.black26, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
-                    child: Row(
-                      children: [
-                        ReorderableDragStartListener(
-                          index: index,
-                          child: const Padding(padding: EdgeInsets.all(8.0), child: Icon(Icons.drag_indicator, color: Colors.grey)),
-                        ),
-                        Expanded(child: Text(exData.exercise.name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          onPressed: () => notifier.removeExercise(index),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // LABEL KOLOM
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 30, child: Text('SET', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold))),
-                        Expanded(flex: 2, child: Text('KG', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                        Expanded(flex: 2, child: Text('REPS', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                        Expanded(flex: 2, child: Text('REST', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                        const SizedBox(width: 36),
-                      ],
-                    ),
-                  ),
-
-                  // LIST SETS
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: List.generate(exData.sets.length, (setIndex) {
-                        return _SetInputRow(
-                          key: ValueKey('${exData.uniqueId}_$setIndex'),
-                          setNumber: setIndex + 1,
-                          initialData: exData.sets[setIndex],
-                          onChanged: (reps, weight, rest) => notifier.updateSet(index, setIndex, reps: reps, weight: weight, rest: rest),
-                          onDelete: () => notifier.removeSet(index, setIndex),
-                        );
-                      }),
-                    ),
-                  ),
-                  
-                  // TOMBOL TAMBAH SET
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    child: InkWell(
-                      onTap: () => notifier.addSet(index),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade800), borderRadius: BorderRadius.circular(8)),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add, size: 18, color: Colors.grey),
-                            SizedBox(width: 6),
-                            Text('Tambah Set', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
+            exerciseIndex: index,
+            data: exData,
+            onRemoveExercise: () => notifier.removeExercise(index),
+            onAddSet: () => notifier.addSet(index),
+            onRemoveSet: (setIndex) => notifier.removeSet(index, setIndex),
+            onUpdateSet: (setIndex, reps, weight, rest) => notifier.updateSet(index, setIndex, reps: reps, weight: weight, rest: rest),
           );
         },
         onReorder: (oldIndex, newIndex) => notifier.reorderExercises(oldIndex, newIndex),
-      ),
-    );
-  }
-}
-
-// === KOMPONEN INPUT SET YANG LEBIH CLEAN ===
-class _SetInputRow extends StatefulWidget {
-  final int setNumber;
-  final ExerciseSetFormData initialData;
-  final Function(int reps, double weight, int rest) onChanged;
-  final VoidCallback onDelete;
-
-  const _SetInputRow({super.key, required this.setNumber, required this.initialData, required this.onChanged, required this.onDelete});
-
-  @override
-  State<_SetInputRow> createState() => _SetInputRowState();
-}
-
-class _SetInputRowState extends State<_SetInputRow> {
-  late TextEditingController weightCtrl;
-  late TextEditingController repsCtrl;
-  late TextEditingController restCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    weightCtrl = TextEditingController(text: widget.initialData.weight == 0 ? '' : widget.initialData.weight.toString());
-    repsCtrl = TextEditingController(text: widget.initialData.reps == 0 ? '' : widget.initialData.reps.toString());
-    restCtrl = TextEditingController(text: widget.initialData.restSeconds.toString());
-  }
-
-  @override
-  void dispose() {
-    weightCtrl.dispose();
-    repsCtrl.dispose();
-    restCtrl.dispose();
-    super.dispose();
-  }
-
-  void _notifyChange() {
-    final w = double.tryParse(weightCtrl.text.replaceAll(',', '.')) ?? 0.0;
-    final r = int.tryParse(repsCtrl.text) ?? 0;
-    final rs = int.tryParse(restCtrl.text) ?? 0;
-    widget.onChanged(r, w, rs);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        children: [
-          SizedBox(width: 30, child: Text('${widget.setNumber}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
-          Expanded(flex: 2, child: _buildSleekField(weightCtrl)),
-          const SizedBox(width: 8),
-          Expanded(flex: 2, child: _buildSleekField(repsCtrl)),
-          const SizedBox(width: 8),
-          Expanded(flex: 2, child: _buildSleekField(restCtrl)),
-          SizedBox(
-            width: 36,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                icon: const Icon(Icons.remove_circle, color: Colors.grey, size: 22),
-                onPressed: widget.onDelete,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSleekField(TextEditingController ctrl) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppTheme.darkBackground, 
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade800)
-      ),
-      child: TextField(
-        controller: ctrl,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-        cursorColor: AppTheme.neonGreen,
-        onChanged: (_) => _notifyChange(),
-        decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.only(bottom: 12)),
       ),
     );
   }
