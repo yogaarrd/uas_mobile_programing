@@ -21,6 +21,10 @@ import 'shared/widgets/global_feedback.dart';
 
 import 'core/services/notification_service.dart';
 
+// summary after workout
+import 'features/workout/pages/session_summary_page.dart';
+import 'features/workout/models/session_summary_args.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
@@ -58,6 +62,14 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingPage()),
     GoRoute(path: '/home', builder: (context, state) => const MainWrapper()),
     GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfilePage()),
+    GoRoute(
+      path: '/summary',
+      builder: (context, state) {
+        // Ambil extra arguments yang dikirim
+        final args = state.extra as SessionSummaryArgs;
+        return SessionSummaryPage(args: args);
+      },
+    ),
 
     // Rute Placeholder
     GoRoute(
