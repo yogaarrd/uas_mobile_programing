@@ -25,12 +25,15 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
       if (event == AuthChangeEvent.signedIn && session != null) {
         if (mounted) {
-          context.go('/home');
+          // Setelah register berhasil, arahkan ke onboarding untuk isi profil
+          context.go('/onboarding');
         }
       }
     });
@@ -48,18 +51,12 @@ class _RegisterPageState extends State<RegisterPage> {
   void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.register(
+      await authProvider.register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _nameController.text.trim(),
       );
-
-      if (mounted && success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registrasi Berhasil!')),
-        );
-        context.go('/login');
-      }
+      // Navigasi ditangani oleh authSubscription di initState
     }
   }
 

@@ -9,11 +9,11 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/pages/login_page.dart';
 import 'features/auth/pages/register_page.dart';
 import 'features/auth/pages/splash_page.dart';
-import 'features/home/pages/home_page.dart'; 
-import 'core/navigation/main_wrapper.dart'; 
-import 'core/theme/app_theme.dart'; 
+import 'features/profile/pages/onboarding_page.dart';
+import 'features/profile/providers/profile_provider.dart';
+import 'core/navigation/main_wrapper.dart';
+import 'core/theme/app_theme.dart';
 
-// === IMPORT INI DITAMBAHKAN UNTUK INF-03 ===
 import 'shared/widgets/global_feedback.dart';
 
 Future<void> main() async {
@@ -25,22 +25,15 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
- 
-  // Menangkap error UI secara global agar terhindar dari Red Screen of Death
   ErrorWidget.builder = (FlutterErrorDetails details) {
-    // Print error asli di terminal untuk keperluan debug developer
-    debugPrint(details.exceptionAsString()); 
-    
+    debugPrint(details.exceptionAsString());
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: AppTheme.darkBackground, // Menggunakan warna dari tema
+        backgroundColor: AppTheme.darkBackground,
         body: GlobalFeedback.errorMessage(
           'Ups! Ada yang salah dengan tampilan ini.\nTim kami akan segera memperbaikinya.',
-          () {
-            // Bisa dikosongkan, atau biarkan user klik tapi tidak melakukan apa-apa 
-            // karena ini error fatal pada UI, bukan pada koneksi data.
-          },
+          () {},
         ),
       ),
     );
@@ -51,23 +44,24 @@ Future<void> main() async {
 
 // Konfigurasi Rute Aplikasi
 final GoRouter _router = GoRouter(
-  initialLocation: '/', 
+  initialLocation: '/',
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashPage()),
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
+    GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingPage()),
     GoRoute(path: '/home', builder: (context, state) => const MainWrapper()),
 
-    // Rute Placeholder (Agar tombol + dan Start tidak crash saat di-klik)
+    // Rute Placeholder
     GoRoute(
-      path: '/create-workout', 
+      path: '/create-workout',
       builder: (context, state) => Scaffold(
         appBar: AppBar(title: const Text('Create Workout')),
         body: const Center(child: Text('Under Construction: Workout Builder')),
       ),
     ),
     GoRoute(
-      path: '/active-session/:id', 
+      path: '/active-session/:id',
       builder: (context, state) => Scaffold(
         appBar: AppBar(title: const Text('Active Session')),
         body: Center(child: Text('Under Construction: Session ID ${state.pathParameters['id']}')),
@@ -84,10 +78,11 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp.router(
         title: 'GymApp',
-        theme: AppTheme.darkTheme, 
+        theme: AppTheme.darkTheme,
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
       ),

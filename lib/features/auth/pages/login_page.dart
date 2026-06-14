@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../../../shared/widgets/custom_input_field.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/global_feedback.dart';
@@ -26,12 +27,19 @@ class _LoginPageState extends State<LoginPage> {
     super.initState();
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
-    ) {
+    ) async {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
       if (event == AuthChangeEvent.signedIn && session != null) {
-        if (mounted) {
+        if (!mounted) return;
+        // Cek profil: jika belum ada → onboarding, jika sudah → home
+        final profileProvider = context.read<ProfileProvider>();
+        final hasProfile = await profileProvider.checkProfileExists(session.user.id);
+        if (!mounted) return;
+        if (hasProfile) {
           context.go('/home');
+        } else {
+          context.go('/onboarding');
         }
       }
     });
