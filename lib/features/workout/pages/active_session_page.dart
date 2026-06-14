@@ -177,12 +177,21 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
               padding: const EdgeInsets.all(8.0),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonGreen, foregroundColor: Colors.black),
-                onPressed: () {
-                  notifier.finishWorkout();
-                  context.pop(); 
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi Selesai!'), backgroundColor: AppTheme.neonGreen));
+                onPressed: state.isSaving ? null : () async {
+                  final summary = await notifier.finishWorkout();
+                  if (!mounted) return;
+
+                  if (summary != null) {
+                    context.go('/summary', extra: summary); // Arahkan ke Summary
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Gagal menyimpan sesi. Coba lagi.'), backgroundColor: Colors.redAccent)
+                    );
+                  }
                 },
-                child: const Text('FINISH', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: state.isSaving 
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                  : const Text('FINISH', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             )
           ],

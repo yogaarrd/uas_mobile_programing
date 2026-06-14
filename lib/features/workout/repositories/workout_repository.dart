@@ -82,4 +82,94 @@ class WorkoutRepository {
     // data di template_exercises dan exercise_sets terkait
     await _supabase.from('workout_templates').delete().eq('id', templateId);
   }
+
+  // === FITUR BARU: SIMPAN SESI & DETEKSI PR ===
+  Future<Map<String, dynamic>> saveWorkoutSession({
+    required String? templateId,
+    required String name,
+    required int durationSeconds,
+    required double totalVolume,
+    required List<Map<String, dynamic>> exercisesData,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User belum login');
+
+    List<String> prMessages = [];
+
+    // 1. DETEKSI PERSONAL RECORD (PR)
+    for (var ex in exercisesData) {
+      final exId = ex['exercise_id'];
+      final currentMaxWeight = ex['max_weight'] as double;
+
+      if (currentMaxWeight > 0) {
+        // Ambil riwayat beban dari database untuk latihan & user ini
+        final pastExercisesResp = await _supabase
+            .from('session_exercises')
+            .select('session_sets(weight, is_completed), workout_sessions!inner(user_id)')
+            .eq('exercise_id', exId)
+            .eq('workout_sessions.user_id', userId);
+
+        double historicalMax = 0;
+        for (var pe in pastExercisesResp) {
+          for (var s in pe['session_sets']) {
+            if (s['is_completed'] == true && s['weight'] != null) {
+              final w = (s['weight'] as num).toDouble();
+              if (w > historicalMax) historicalMax = w;
+            }
+          }
+        }
+
+        // Bandingkan beban sekarang dengan beban tertinggi sebelumnya
+        if (currentMaxWeight > historicalMax) {
+          String displayWeight = currentMaxWeight.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+          if (historicalMax == 0) {
+            prMessages.add('Latihan Perdana! ${ex['exercise_name']} $displayWeight kg');
+          } else {
+            prMessages.add('New PR! ${ex['exercise_name']} $displayWeight kg 🏆');
+          }
+        }
+      }
+    }
+
+    // 2. SIMPAN WORKOUT SESSION
+    final sessionResp = await _supabase.from('workout_sessions').insert({
+      'user_id': userId,
+      'template_id': templateId,
+      'name': name,
+      'duration_seconds': durationSeconds,
+      'total_volume_kg': totalVolume,
+    }).select().single();
+
+    final sessionId = sessionResp['id'];
+
+    // 3. SIMPAN EXERCISES DAN SETS
+    for (int i = 0; i < exercisesData.length; i++) {
+      final ex = exercisesData[i];
+      final seResp = await _supabase.from('session_exercises').insert({
+        'session_id': sessionId,
+        'exercise_id': ex['exercise_id'],
+        'order_index': i
+      }).select().single();
+
+      final seId = seResp['id'];
+      final sets = ex['sets'] as List;
+
+      if (sets.isNotEmpty) {
+        final setsToInsert = sets.map((s) => {
+          'session_exercise_id': seId,
+          'set_number': s['set_number'],
+          'reps': s['reps'],
+          'weight': s['weight'],
+          'is_completed': s['is_completed'],
+          'completed_at': s['is_completed'] ? DateTime.now().toIso8601String() : null,
+        }).toList();
+        await _supabase.from('session_sets').insert(setsToInsert);
+      }
+    }
+
+    return {
+      'session_id': sessionId,
+      'pr_messages': prMessages,
+    };
+  }
 }

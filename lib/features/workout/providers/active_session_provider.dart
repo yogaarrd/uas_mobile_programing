@@ -5,6 +5,7 @@ import '../models/exercise_models.dart';
 import '../repositories/workout_repository.dart';
 import 'workout_provider.dart';
 import '../../../core/services/notification_service.dart';
+import '../models/session_summary_args.dart';
 
 class ActiveSet {
   int reps;
@@ -48,6 +49,7 @@ class ActiveSessionState {
   final bool isTransitioning;
   final String transitionMessage;
   final int transitionSecondsRemaining; // Tambahan untuk waktu loading splash
+  final bool isSaving;
 
   ActiveSessionState({
     this.templateId,
@@ -60,6 +62,7 @@ class ActiveSessionState {
     this.isTransitioning = false,
     this.transitionMessage = '',
     this.transitionSecondsRemaining = 0,
+    this.isSaving = false, // Default false
   });
 
   ActiveSessionState copyWith({
@@ -73,6 +76,7 @@ class ActiveSessionState {
     bool? isTransitioning,
     String? transitionMessage,
     int? transitionSecondsRemaining,
+    bool? isSaving,
   }) {
     return ActiveSessionState(
       templateId: templateId ?? this.templateId,
@@ -85,6 +89,7 @@ class ActiveSessionState {
       isTransitioning: isTransitioning ?? this.isTransitioning,
       transitionMessage: transitionMessage ?? this.transitionMessage,
       transitionSecondsRemaining: transitionSecondsRemaining ?? this.transitionSecondsRemaining,
+      isSaving: isSaving ?? this.isSaving,
     );
   }
 
@@ -267,10 +272,70 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     });
   }
 
-  void finishWorkout() {
+// MENGGANTI FUNGSI finishWorkout()
+  Future<SessionSummaryArgs?> finishWorkout() async {
     _sessionTimer?.cancel();
     _restTimer?.cancel();
     _transitionTimer?.cancel();
+
+    state = state.copyWith(isSaving: true);
+
+    try {
+      double totalVolume = 0;
+      int setsDone = 0;
+      List<Map<String, dynamic>> exData = [];
+
+      // Kalkulasi semua data set
+      for (var ex in state.exercises) {
+        double maxWeight = 0;
+        List<Map<String, dynamic>> setsData = [];
+        for (int i = 0; i < ex.sets.length; i++) {
+          final s = ex.sets[i];
+          if (s.isCompleted) {
+            setsDone++;
+            totalVolume += (s.weight * s.reps);
+            if (s.weight > maxWeight) maxWeight = s.weight;
+          }
+          setsData.add({
+            'set_number': i + 1,
+            'reps': s.reps,
+            'weight': s.weight,
+            'is_completed': s.isCompleted,
+          });
+        }
+        exData.add({
+          'exercise_id': ex.exercise.id,
+          'exercise_name': ex.exercise.name,
+          'max_weight': maxWeight,
+          'sets': setsData,
+        });
+      }
+
+      // Panggil Repo untuk Simpan ke DB
+      final repo = ref.read(workoutRepositoryProvider);
+      final result = await repo.saveWorkoutSession(
+        templateId: state.templateId,
+        name: state.workoutName,
+        durationSeconds: state.elapsedSeconds,
+        totalVolume: totalVolume,
+        exercisesData: exData,
+      );
+      
+      state = state.copyWith(isSaving: false);
+      
+      // Kembalikan argumen untuk Summary Page
+      return SessionSummaryArgs(
+        workoutName: state.workoutName,
+        durationSeconds: state.elapsedSeconds,
+        totalVolume: totalVolume,
+        completedSets: setsDone,
+        prMessages: List<String>.from(result['pr_messages']),
+      );
+
+    } catch (e) {
+      state = state.copyWith(isSaving: false);
+      return null; 
+    }
   }
 }
 
