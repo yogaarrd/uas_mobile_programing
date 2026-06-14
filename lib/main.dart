@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uas_mobile_programing/features/workout/pages/create_workout_page.dart';
 
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/pages/login_page.dart';
@@ -57,10 +58,11 @@ final GoRouter _router = GoRouter(
     // Rute Placeholder
     GoRoute(
       path: '/create-workout',
-      builder: (context, state) => Scaffold(
-        appBar: AppBar(title: const Text('Create Workout')),
-        body: const Center(child: Text('Under Construction: Workout Builder')),
-      ),
+      builder: (context, state) {
+        // Menerima parameter ID jika mode edit
+        final id = state.uri.queryParameters['id'];
+        return CreateWorkoutPage(templateId: id);
+      },
     ),
     GoRoute(
       path: '/active-session/:id',
