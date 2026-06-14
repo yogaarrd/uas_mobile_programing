@@ -152,13 +152,22 @@ class _WorkoutTemplateCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              template.name,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+// Pada bagian class _WorkoutTemplateCard, ubah bagian Text(template.name) menjadi:
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    template.name,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                // Tombol Edit yang mengarah ke builder dengan ID
+                IconButton(
+                  icon: const Icon(Icons.edit_note, color: Colors.grey),
+                  onPressed: () => context.push('/create-workout?id=${template.id}'),
+                )
+              ],
             ),
             if (template.description != null && template.description!.isNotEmpty) ...[
               const SizedBox(height: 4),
