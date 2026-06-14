@@ -22,6 +22,7 @@ class UserProfile {
   final double weightKg;
   final double heightCm;
   final FitnessGoal goal;
+  final String? avatarUrl; // URL foto profil dari Supabase Storage
   final DateTime? createdAt;
 
   const UserProfile({
@@ -31,8 +32,30 @@ class UserProfile {
     required this.weightKg,
     required this.heightCm,
     required this.goal,
+    this.avatarUrl,
     this.createdAt,
   });
+
+  /// Buat salinan dengan field yang diubah
+  UserProfile copyWith({
+    String? fullName,
+    DateTime? birthDate,
+    double? weightKg,
+    double? heightCm,
+    FitnessGoal? goal,
+    String? avatarUrl,
+  }) {
+    return UserProfile(
+      id: id,
+      fullName: fullName ?? this.fullName,
+      birthDate: birthDate ?? this.birthDate,
+      weightKg: weightKg ?? this.weightKg,
+      heightCm: heightCm ?? this.heightCm,
+      goal: goal ?? this.goal,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      createdAt: createdAt,
+    );
+  }
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -42,6 +65,7 @@ class UserProfile {
       weightKg: (json['weight_kg'] as num).toDouble(),
       heightCm: (json['height_cm'] as num).toDouble(),
       goal: FitnessGoal.fromString(json['goal'] as String),
+      avatarUrl: json['avatar_url'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -57,6 +81,7 @@ class UserProfile {
       'weight_kg': weightKg,
       'height_cm': heightCm,
       'goal': goal.label,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
     };
   }
 }

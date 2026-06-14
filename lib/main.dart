@@ -10,6 +10,7 @@ import 'features/auth/pages/login_page.dart';
 import 'features/auth/pages/register_page.dart';
 import 'features/auth/pages/splash_page.dart';
 import 'features/profile/pages/onboarding_page.dart';
+import 'features/profile/pages/edit_profile_page.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'core/navigation/main_wrapper.dart';
 import 'core/theme/app_theme.dart';
@@ -51,6 +52,7 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/register', builder: (context, state) => const RegisterPage()),
     GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingPage()),
     GoRoute(path: '/home', builder: (context, state) => const MainWrapper()),
+    GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfilePage()),
 
     // Rute Placeholder
     GoRoute(

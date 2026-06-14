@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   weight_kg   NUMERIC(5,2) NOT NULL CHECK (weight_kg BETWEEN 20 AND 300),
   height_cm   NUMERIC(5,2) NOT NULL CHECK (height_cm BETWEEN 100 AND 250),
   goal        public.fitness_goal_enum NOT NULL DEFAULT 'General Fitness',
+  avatar_url  TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -64,6 +65,52 @@ CREATE TRIGGER on_profiles_updated
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_updated_at();
+
+-- ============================================================
+-- STORAGE: Setup bucket 'avatars' untuk foto profil
+-- ============================================================
+
+-- 8. Buat Storage bucket 'avatars'
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 9. Policy: User bisa UPLOAD foto ke folder miliknya sendiri
+CREATE POLICY "Users can upload own avatar"
+  ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- 10. Policy: User bisa UPDATE/REPLACE foto miliknya
+CREATE POLICY "Users can update own avatar"
+  ON storage.objects
+  FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- 11. Policy: Foto bisa dilihat oleh siapapun (public)
+CREATE POLICY "Avatars are publicly accessible"
+  ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'avatars');
+
+-- 12. Policy: User bisa DELETE foto miliknya
+CREATE POLICY "Users can delete own avatar"
+  ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 -- ============================================================
 -- Verifikasi: cek apakah tabel berhasil dibuat
