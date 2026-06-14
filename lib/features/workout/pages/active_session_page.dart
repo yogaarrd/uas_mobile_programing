@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/exercise_models.dart';
 import '../providers/active_session_provider.dart';
+// IMPORT BOTTOM SHEET LIBRARY LATIHAN KITA:
+import '../widgets/exercise_selection_sheet.dart';
 
 class ActiveSessionPage extends ConsumerStatefulWidget {
   final String? templateId;
@@ -178,11 +180,49 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonGreen, foregroundColor: Colors.black),
                 onPressed: state.isSaving ? null : () async {
-                  final summary = await notifier.finishWorkout();
+                  bool shouldUpdateTemplate = false;
+
+                  // Tampilkan dialog konfirmasi JIKA INI BUKAN FREE WORKOUT (templateId ada)
+                  if (state.templateId != null) {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: AppTheme.surfaceColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Text('Workout Selesai!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        content: const Text(
+                          'Apakah Anda ingin menyimpan penambahan set/latihan dan perubahan beban ini sebagai template permanen untuk latihan selanjutnya?', 
+                          style: TextStyle(color: Colors.grey, height: 1.5)
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Tidak, Simpan History Saja', style: TextStyle(color: Colors.grey)),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.neonGreen,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('Ya, Update Template', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                    
+                    // Jika user menekan di luar pop-up (batal klik finish)
+                    if (result == null) return; 
+                    shouldUpdateTemplate = result;
+                  }
+
+                  // Eksekusi fungsi finish dengan parameter konfirmasi
+                  final summary = await notifier.finishWorkout(updateTemplate: shouldUpdateTemplate);
                   if (!mounted) return;
 
                   if (summary != null) {
-                    context.go('/summary', extra: summary); // Arahkan ke Summary
+                    context.go('/summary', extra: summary); 
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Gagal menyimpan sesi. Coba lagi.'), backgroundColor: Colors.redAccent)
@@ -208,20 +248,54 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
           children: [
             ListView.builder(
               padding: const EdgeInsets.only(bottom: 140), 
-              itemCount: state.exercises.length,
-              itemBuilder: (ctx, exIndex) {
-                final exData = state.exercises[exIndex];
-                final isActiveExercise = exIndex == currentExIndex;
+              // ITEM COUNT DI DITAMBAH 1 UNTUK TOMBOL "ADD EXERCISE"
+              itemCount: state.exercises.length + 1,
+              itemBuilder: (ctx, index) {
+                // JIKA INDEX TERAKHIR, TAMPILKAN TOMBOL ADD
+                if (index == state.exercises.length) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        // Buka library latihan
+                        final selected = await showModalBottomSheet<ExerciseModel>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (ctx) => const ExerciseSelectionSheet(),
+                        );
+                        // Tambahkan jika user memilih latihan
+                        if (selected != null && mounted) {
+                          notifier.addSpontaneousExercise(selected);
+                        }
+                      },
+                      icon: const Icon(Icons.add, color: AppTheme.neonGreen),
+                      label: const Text('Tambah Latihan Ekstra', style: TextStyle(color: AppTheme.neonGreen, fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: AppTheme.neonGreen.withOpacity(0.5), width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        backgroundColor: AppTheme.neonGreen.withOpacity(0.05),
+                      ),
+                    ),
+                  );
+                }
+
+                // JIKA BUKAN INDEX TERAKHIR, TAMPILKAN CARD LATIHAN
+                final exData = state.exercises[index];
+                final isActiveExercise = index == currentExIndex;
                 final activeSetIndex = isActiveExercise ? state.currentSetIndex : -1;
 
                 return _ActiveExerciseCard(
-                  exIndex: exIndex,
+                  exIndex: index,
                   data: exData,
                   isActiveExercise: isActiveExercise,
                   activeSetIndex: activeSetIndex ?? -1,
-                  onToggleSet: (setIndex) => notifier.toggleSet(exIndex, setIndex),
-                  onUpdateSet: (setIndex, reps, weight) => notifier.updateSetActuals(exIndex, setIndex, reps, weight),
+                  onToggleSet: (setIndex) => notifier.toggleSet(index, setIndex),
+                  onUpdateSet: (setIndex, reps, weight) => notifier.updateSetActuals(index, setIndex, reps, weight),
                   onShowDetail: () => _showExerciseDetail(context, exData.exercise),
+                  onAddSet: () => notifier.addSet(index),            // CALLBACK BARU
+                  onRemoveExercise: () => notifier.removeExercise(index), // CALLBACK BARU
                 );
               },
             ),
@@ -278,7 +352,7 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
                         ),
                       ],
                     )
-                  // --- MODE AKTIF (TIDAK REST) - DENGAN GIF ---
+                  // --- MODE AKTIF (TIDAK REST) ---
                   : Row(
                       children: [
                         Container(
@@ -318,9 +392,7 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
               ),
             ),
 
-            // ========================================================
-            // OVERLAY: NEW PREMIUM SPLASH SCREEN TRANSISI MOTIVASI
-            // ========================================================
+            // OVERLAY: SPLASH SCREEN TRANSISI MOTIVASI
             Positioned.fill(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 400),
@@ -332,12 +404,8 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
                         width: double.infinity,
                         decoration: const BoxDecoration(
                           color: AppTheme.darkBackground,
-                          // Efek Radial Gradient agar layar tidak flat
                           gradient: RadialGradient(
-                            colors: [
-                              Color(0xFF2B2B3A), // Sedikit lebih terang di tengah
-                              AppTheme.darkBackground,
-                            ],
+                            colors: [Color(0xFF2B2B3A), AppTheme.darkBackground],
                             radius: 1.2,
                           ),
                         ),
@@ -345,7 +413,6 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // 1. LABEL GET READY
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                                 decoration: BoxDecoration(
@@ -364,61 +431,25 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
                                 ),
                               ),
                               const SizedBox(height: 50),
-
-                              // 2. GIANT GLOWING COUNTDOWN
                               Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  // Shadow/Glow effect
                                   Container(
-                                    width: 160,
-                                    height: 160,
+                                    width: 160, height: 160,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.neonGreen.withOpacity(0.2),
-                                          blurRadius: 40,
-                                          spreadRadius: 10,
-                                        ),
-                                      ],
+                                      boxShadow: [BoxShadow(color: AppTheme.neonGreen.withOpacity(0.2), blurRadius: 40, spreadRadius: 10)],
                                     ),
                                   ),
-                                  // Background Track
-                                  const SizedBox(
-                                    width: 160,
-                                    height: 160,
-                                    child: CircularProgressIndicator(
-                                      value: 1.0,
-                                      color: Colors.black26,
-                                      strokeWidth: 8,
-                                    ),
-                                  ),
-                                  // Spinning Progress
-                                  const SizedBox(
-                                    width: 160,
-                                    height: 160,
-                                    child: CircularProgressIndicator(
-                                      color: AppTheme.neonGreen,
-                                      strokeWidth: 8,
-                                    ),
-                                  ),
-                                  // Countdown Number
+                                  const SizedBox(width: 160, height: 160, child: CircularProgressIndicator(value: 1.0, color: Colors.black26, strokeWidth: 8)),
+                                  const SizedBox(width: 160, height: 160, child: CircularProgressIndicator(color: AppTheme.neonGreen, strokeWidth: 8)),
                                   Text(
                                     '${state.transitionSecondsRemaining}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 72,
-                                      fontWeight: FontWeight.w900,
-                                      height: 1.0,
-                                    ),
+                                    style: const TextStyle(color: Colors.white, fontSize: 72, fontWeight: FontWeight.w900, height: 1.0),
                                   ),
                                 ],
                               ),
-
                               const SizedBox(height: 50),
-
-                              // 3. ELEGANT MOTIVATIONAL QUOTE CARD
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 32),
                                 child: Container(
@@ -427,31 +458,16 @@ class _ActiveSessionPageState extends ConsumerState<ActiveSessionPage> {
                                     color: AppTheme.surfaceColor,
                                     borderRadius: BorderRadius.circular(24),
                                     border: Border.all(color: Colors.grey.shade800),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.4),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 10),
-                                      ),
-                                    ],
+                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))],
                                   ),
                                   child: Column(
                                     children: [
-                                      Icon(
-                                        Icons.format_quote_rounded,
-                                        color: AppTheme.neonGreen.withOpacity(0.6),
-                                        size: 40,
-                                      ),
+                                      Icon(Icons.format_quote_rounded, color: AppTheme.neonGreen.withOpacity(0.6), size: 40),
                                       const SizedBox(height: 12),
                                       Text(
                                         state.transitionMessage,
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.4,
-                                        ),
+                                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, height: 1.4),
                                       ),
                                     ],
                                   ),
@@ -492,6 +508,8 @@ class _ActiveExerciseCard extends StatelessWidget {
   final Function(int setIndex) onToggleSet;
   final Function(int setIndex, int reps, double weight) onUpdateSet;
   final VoidCallback onShowDetail; 
+  final VoidCallback onAddSet;         // PARAMETER BARU
+  final VoidCallback onRemoveExercise; // PARAMETER BARU
 
   const _ActiveExerciseCard({
     required this.exIndex, 
@@ -500,7 +518,9 @@ class _ActiveExerciseCard extends StatelessWidget {
     required this.activeSetIndex,
     required this.onToggleSet, 
     required this.onUpdateSet, 
-    required this.onShowDetail
+    required this.onShowDetail,
+    required this.onAddSet,
+    required this.onRemoveExercise,
   });
 
   @override
@@ -515,9 +535,19 @@ class _ActiveExerciseCard extends StatelessWidget {
           ListTile(
             title: Text(data.exercise.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             subtitle: Text(data.exercise.muscleGroup.toUpperCase(), style: const TextStyle(color: AppTheme.neonGreen, fontSize: 11)),
-            trailing: IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.grey),
-              onPressed: onShowDetail,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline, color: Colors.grey),
+                  onPressed: onShowDetail,
+                ),
+                // TOMBOL HAPUS EXERCISE
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.redAccent),
+                  onPressed: onRemoveExercise,
+                ),
+              ],
             ),
           ),
           const Padding(
@@ -544,7 +574,29 @@ class _ActiveExerciseCard extends StatelessWidget {
               onToggle: () => onToggleSet(setIndex),
             );
           }),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          
+          // TOMBOL TAMBAH SET DI BAWAH CARD
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: InkWell(
+              onTap: onAddSet,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade800), borderRadius: BorderRadius.circular(8)),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add, size: 18, color: Colors.grey),
+                    SizedBox(width: 6),
+                    Text('Tambah Set', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+          )
         ],
       ),
     );
