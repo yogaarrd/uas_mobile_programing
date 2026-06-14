@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart'; 
-// Tambahkan "hide Provider" di sini agar tidak bentrok dengan package provider bawaan
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider; 
 import '../../../core/theme/app_theme.dart';
 import '../../workout/providers/workout_provider.dart'; 
@@ -14,7 +13,6 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kita gunakan DefaultTabController agar bisa memantau perubahan tab
     return DefaultTabController(
       length: 2,
       child: Builder(
@@ -23,11 +21,9 @@ class HomePage extends StatelessWidget {
 
           return Scaffold(
             backgroundColor: AppTheme.darkBackground,
-            // Gunakan AnimatedBuilder untuk memunculkan/menyembunyikan tombol secara halus
             floatingActionButton: AnimatedBuilder(
               animation: tabController,
               builder: (context, child) {
-                // Jika index 0 (My Workouts), tampilkan tombol. Jika tidak, sembunyikan.
                 return tabController.index == 0
                     ? FloatingActionButton(
                         backgroundColor: AppTheme.neonGreen,
@@ -48,7 +44,6 @@ class HomePage extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.redAccent),
                   onPressed: () async {
-                    // Menggunakan context.read yang lebih aman dari bentrok namespace
                     await context.read<AuthProvider>().logout();
                     if (context.mounted) context.go('/login');
                   },
@@ -74,13 +69,11 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// === TAB 1: MENAMPILKAN DATA WORKOUT ===
 class MyWorkoutsView extends ConsumerWidget {
   const MyWorkoutsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Memantau state data workout dari Riverpod
     final templatesAsync = ref.watch(workoutTemplatesProvider);
 
     return templatesAsync.when(
@@ -136,13 +129,73 @@ class MyWorkoutsView extends ConsumerWidget {
   }
 }
 
-// === WIDGET CARD WORKOUT ===
-class _WorkoutTemplateCard extends StatelessWidget {
+// === CARD DIUBAH JADI CONSUMER WIDGET AGAR BISA AKSES REF ===
+class _WorkoutTemplateCard extends ConsumerWidget {
   final WorkoutTemplate template;
   const _WorkoutTemplateCard({required this.template});
 
+  Future<void> _handleDelete(BuildContext context, WidgetRef ref) async {
+    // 1. Tampilkan Dialog Konfirmasi
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Workout?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Apakah kamu yakin ingin menghapus template "${template.name}"?\nData yang dihapus tidak dapat dikembalikan.',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    // 2. Lakukan Proses Penghapusan jika Dikonfirmasi
+    if (confirmed == true && context.mounted) {
+      try {
+        // Tampilkan loading overlay pencegah double tap
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.neonGreen)),
+        );
+
+        final repo = ref.read(workoutRepositoryProvider);
+        await repo.deleteWorkoutTemplate(template.id);
+        
+        if (!context.mounted) return;
+        Navigator.pop(context); // Tutup loading overlay
+
+        // Minta Riverpod memuat ulang daftar data terbaru dari database
+        ref.invalidate(workoutTemplatesProvider);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Workout berhasil dihapus', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)), 
+            backgroundColor: AppTheme.neonGreen,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        if (context.mounted) Navigator.pop(context); // Tutup loading overlay
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final estimatedTime = template.exerciseCount * 10;
     return Card(
       color: AppTheme.surfaceColor,
@@ -152,9 +205,9 @@ class _WorkoutTemplateCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-// Pada bagian class _WorkoutTemplateCard, ubah bagian Text(template.name) menjadi:
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
@@ -162,11 +215,24 @@ class _WorkoutTemplateCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
-                // Tombol Edit yang mengarah ke builder dengan ID
-                IconButton(
-                  icon: const Icon(Icons.edit_note, color: Colors.grey),
-                  onPressed: () => context.push('/create-workout?id=${template.id}'),
-                )
+                // Tombol Edit dan Hapus Berjejer
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_note, color: Colors.grey),
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.only(right: 12),
+                      onPressed: () => context.push('/create-workout?id=${template.id}'),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _handleDelete(context, ref),
+                    ),
+                  ],
+                ),
               ],
             ),
             if (template.description != null && template.description!.isNotEmpty) ...[
@@ -182,34 +248,30 @@ class _WorkoutTemplateCard extends StatelessWidget {
             Row(
               children: [
                 Flexible(
-                  child: _buildBadge(
-                    Icons.format_list_bulleted,
-                    '${template.exerciseCount} Latihan',
-                  ),
+                  child: _buildBadge(Icons.format_list_bulleted, '${template.exerciseCount} Latihan'),
                 ),
                 const SizedBox(width: 16),
                 Flexible(
-                  child: _buildBadge(
-                    Icons.timer_outlined,
-                    '~ $estimatedTime mnt',
-                  ),
+                  child: _buildBadge(Icons.timer_outlined, '~ $estimatedTime mnt'),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            
-            // Menampilkan Muscle Groups chip
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: template.muscleGroups.map((m) => _buildMuscleChip(m)).toList(),
             ),
-            
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => context.push('/active-session/${template.id}'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.neonGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 child: const Text(
                   'Start Workout', 
                   style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 16),

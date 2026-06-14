@@ -28,7 +28,7 @@ class WorkoutRepository {
   Future<void> saveWorkoutTemplate({
     String? templateId,
     required String name,
-    String? description, // TAMBAHAN: Kolom deskripsi
+    String? description, 
     required List<dynamic> exercises, 
   }) async {
     final userId = _supabase.auth.currentUser?.id;
@@ -40,13 +40,13 @@ class WorkoutRepository {
       final resp = await _supabase.from('workout_templates').insert({
         'user_id': userId,
         'name': name,
-        'description': description, // TAMBAHAN
+        'description': description, 
       }).select().single();
       currentTemplateId = resp['id'];
     } else {
       await _supabase.from('workout_templates').update({
         'name': name,
-        'description': description, // TAMBAHAN
+        'description': description, 
       }).eq('id', templateId);
       currentTemplateId = templateId;
       await _supabase.from('template_exercises').delete().eq('template_id', templateId);
@@ -74,5 +74,12 @@ class WorkoutRepository {
         await _supabase.from('exercise_sets').insert(setsData);
       }
     }
+  }
+
+  // === FITUR BARU: HAPUS WORKOUT ===
+  Future<void> deleteWorkoutTemplate(String templateId) async {
+    // Relasi ON DELETE CASCADE di database akan otomatis menghapus 
+    // data di template_exercises dan exercise_sets terkait
+    await _supabase.from('workout_templates').delete().eq('id', templateId);
   }
 }
