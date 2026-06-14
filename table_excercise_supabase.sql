@@ -13,7 +13,7 @@ create type public.equipment_enum as enum (
   'bodyweight',
   'dumbbell',
   'barbell',
-  'machine'
+  'machine' 
 );
 
 -- Buat Table
@@ -89,3 +89,37 @@ INSERT INTO "public"."exercises" (
 ('f55ecfcb-7242-4c67-8f3a-8a15219b3deb', 'Hanging Leg Raise', 'core', ARRAY['arms'], 'bodyweight', 'Menggantung lurus di pull-up bar. Angkat kedua kaki lurus ke depan hingga rata dengan panggul (90 derajat) tanpa mengayun.', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtfzJGc_WJ2hYXaxkjXn6C3s6sIb1nQEH5_RdAKd31zw&s=10', false, null, '2026-06-06 05:19:47.851855+00'), 
 ('f5de0fbc-1af2-4d27-8a37-b3aed27649d8', 'Pull Up', 'back', ARRAY['arms','core'], 'bodyweight', 'Gantungkan tubuh di pull-up bar. Tarik tubuh ke atas hingga dagu melewati bar, lalu turunkan tubuh dengan terkontrol dan tidak berayun.', 'https://liftmanual.com/wp-content/uploads/2023/04/pull-up.jpg', false, null, '2026-06-06 05:19:47.851855+00'), 
 ('fee1da93-746d-4b94-ba33-ca8c83ab6845', 'Russian Twist', 'core', ARRAY[]::text[], 'bodyweight', 'Duduk dengan kaki sedikit melayang. Condongkan badan 45 derajat ke belakang dan putar bahu ke sisi kanan lalu kiri.', 'https://trainingstation.co.uk/cdn/shop/articles/russian-twist-kettlebell_1_1600x.png?v=1758384047', false, null, '2026-06-06 05:19:47.851855+00');
+
+
+-- 1. Pastikan fitur RLS aktif pada tabel exercises
+ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
+
+-- 2. POLICY READ (SELECT)
+-- Mengizinkan semua user yang sudah login untuk melihat latihan bawaan (is_custom = false)
+-- DAN melihat latihan custom yang mereka buat sendiri (created_by = auth.uid())
+CREATE POLICY "Izinkan user melihat latihan bawaan dan miliknya sendiri"
+ON public.exercises FOR SELECT
+TO authenticated
+USING (is_custom = false OR created_by = auth.uid());
+
+-- 3. POLICY CREATE (INSERT)
+-- User hanya bisa memasukkan data jika itu adalah latihan custom (is_custom = true) 
+-- dan didaftarkan atas ID mereka sendiri.
+CREATE POLICY "Izinkan user menambah latihan custom"
+ON public.exercises FOR INSERT
+TO authenticated
+WITH CHECK (is_custom = true AND created_by = auth.uid());
+
+-- 4. POLICY UPDATE
+-- User HANYA bisa mengedit data jika ID pembuatnya cocok dengan ID user tersebut.
+CREATE POLICY "Izinkan user mengedit latihan miliknya sendiri"
+ON public.exercises FOR UPDATE
+TO authenticated
+USING (created_by = auth.uid());
+
+-- 5. POLICY DELETE
+-- User HANYA bisa menghapus data jika ID pembuatnya cocok dengan ID user tersebut.
+CREATE POLICY "Izinkan user menghapus latihan miliknya sendiri"
+ON public.exercises FOR DELETE
+TO authenticated
+USING (created_by = auth.uid());
