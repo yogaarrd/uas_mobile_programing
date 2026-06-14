@@ -171,5 +171,34 @@ class WorkoutRepository {
       'session_id': sessionId,
       'pr_messages': prMessages,
     };
+    
+  }
+  Future<void> syncTemplateWithSession(String templateId, List<Map<String, dynamic>> exercisesData) async {
+    // 1. Hapus relasi latihan lama pada template tersebut (CASCADE akan menghapus sets otomatis)
+    await _supabase.from('template_exercises').delete().eq('template_id', templateId);
+
+    // 2. Insert relasi latihan dan set yang baru sesuai sesi terakhir
+    for (int i = 0; i < exercisesData.length; i++) {
+      final ex = exercisesData[i];
+      final teResp = await _supabase.from('template_exercises').insert({
+        'template_id': templateId,
+        'exercise_id': ex['exercise_id'],
+        'order_index': i,
+      }).select().single();
+
+      final teId = teResp['id'];
+      final sets = ex['sets'] as List;
+
+      if (sets.isNotEmpty) {
+        final setsToInsert = sets.map((s) => {
+          'template_exercise_id': teId,
+          'set_number': s['set_number'],
+          'reps': s['reps'],
+          'weight': s['weight'],
+          'rest_seconds': s['rest_seconds'] ?? 60, // Membawa waktu rest
+        }).toList();
+        await _supabase.from('exercise_sets').insert(setsToInsert);
+      }
+    }
   }
 }

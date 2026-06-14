@@ -44,11 +44,9 @@ class ActiveSessionState {
   final int restSecondsRemaining;
   final bool isResting;
   final bool isLoading;
-  
-  // STATE SPLASH SCREEN
   final bool isTransitioning;
   final String transitionMessage;
-  final int transitionSecondsRemaining; // Tambahan untuk waktu loading splash
+  final int transitionSecondsRemaining;
   final bool isSaving;
 
   ActiveSessionState({
@@ -62,7 +60,7 @@ class ActiveSessionState {
     this.isTransitioning = false,
     this.transitionMessage = '',
     this.transitionSecondsRemaining = 0,
-    this.isSaving = false, // Default false
+    this.isSaving = false,
   });
 
   ActiveSessionState copyWith({
@@ -122,7 +120,7 @@ class ActiveSessionState {
 class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
   Timer? _sessionTimer;
   Timer? _restTimer;
-  Timer? _transitionTimer; 
+  Timer? _transitionTimer;
 
   @override
   ActiveSessionState build() {
@@ -179,6 +177,45 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     });
   }
 
+  // ============================================================
+  // FITUR BARU [SES-05]: Tambah Exercise Spontan & Manipulasi Set
+  // ============================================================
+
+  void addSpontaneousExercise(ExerciseModel exercise) {
+    final newExercise = ActiveExercise(
+      exercise: exercise,
+      sets: [
+        ActiveSet(reps: 0, weight: 0, restSeconds: 60), // Default 1 set kosong
+      ],
+    );
+    state = state.copyWith(exercises: [...state.exercises, newExercise]);
+  }
+
+  void addSet(int exIndex) {
+    final list = List<ActiveExercise>.from(state.exercises);
+    final ex = list[exIndex];
+    
+    // Copy data dari set terakhir untuk mempercepat input user
+    ActiveSet newSet = ActiveSet(reps: 0, weight: 0, restSeconds: 60);
+    if (ex.sets.isNotEmpty) {
+      final last = ex.sets.last;
+      newSet = ActiveSet(reps: last.reps, weight: last.weight, restSeconds: last.restSeconds);
+    }
+    
+    final updatedSets = List<ActiveSet>.from(ex.sets)..add(newSet);
+    list[exIndex] = ex.copyWith(sets: updatedSets);
+    
+    state = state.copyWith(exercises: list);
+  }
+
+  void removeExercise(int exIndex) {
+    final list = List<ActiveExercise>.from(state.exercises);
+    list.removeAt(exIndex);
+    state = state.copyWith(exercises: list);
+  }
+
+  // ============================================================
+
   void toggleSet(int exIndex, int setIndex) {
     final list = List<ActiveExercise>.from(state.exercises);
     final ex = list[exIndex];
@@ -211,10 +248,7 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
       if (state.restSecondsRemaining > 1) {
         state = state.copyWith(restSecondsRemaining: state.restSecondsRemaining - 1);
       } else {
-        // [FITUR BARU]: Waktu habis secara natural (bukan di-skip)
-        // 1. Panggil notifikasi suara & getar
         NotificationService.showRestFinishedNotification();
-        // 2. Munculkan splash screen
         _showTransitionSplash(); 
       }
     });
@@ -235,7 +269,6 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     _showTransitionSplash();
   }
 
-  // --- LOGIKA SPLASH SCREEN DIPERBARUI ---
   void _showTransitionSplash() {
     _restTimer?.cancel();
     _transitionTimer?.cancel();
@@ -251,7 +284,7 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     ];
     
     final quote = quotes[Random().nextInt(quotes.length)];
-    final durationSeconds = Random().nextInt(3) + 3; // Acak antara 3 sampai 5 detik
+    final durationSeconds = Random().nextInt(3) + 3;
 
     state = state.copyWith(
       isResting: false,
@@ -261,7 +294,6 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
       transitionSecondsRemaining: durationSeconds,
     );
 
-    // Timer berjalan setiap detik untuk mengupdate loading countdown
     _transitionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.transitionSecondsRemaining > 1) {
         state = state.copyWith(transitionSecondsRemaining: state.transitionSecondsRemaining - 1);
@@ -272,8 +304,8 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     });
   }
 
-// MENGGANTI FUNGSI finishWorkout()
-  Future<SessionSummaryArgs?> finishWorkout() async {
+  // MENGGANTI FUNGSI finishWorkout()
+  Future<SessionSummaryArgs?> finishWorkout({bool updateTemplate = false}) async {
     _sessionTimer?.cancel();
     _restTimer?.cancel();
     _transitionTimer?.cancel();
@@ -285,7 +317,6 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
       int setsDone = 0;
       List<Map<String, dynamic>> exData = [];
 
-      // Kalkulasi semua data set
       for (var ex in state.exercises) {
         double maxWeight = 0;
         List<Map<String, dynamic>> setsData = [];
@@ -300,6 +331,7 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
             'set_number': i + 1,
             'reps': s.reps,
             'weight': s.weight,
+            'rest_seconds': s.restSeconds, // [BARU] Bawa data rest time
             'is_completed': s.isCompleted,
           });
         }
@@ -311,8 +343,9 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
         });
       }
 
-      // Panggil Repo untuk Simpan ke DB
       final repo = ref.read(workoutRepositoryProvider);
+      
+      // 1. Simpan Sesi Historis
       final result = await repo.saveWorkoutSession(
         templateId: state.templateId,
         name: state.workoutName,
@@ -320,10 +353,15 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
         totalVolume: totalVolume,
         exercisesData: exData,
       );
+
+      // 2. [FITUR BARU] Update Template Asli jika diminta user
+      if (updateTemplate && state.templateId != null) {
+        await repo.syncTemplateWithSession(state.templateId!, exData);
+        ref.invalidate(workoutTemplatesProvider); // Refresh daftar template di beranda
+      }
       
       state = state.copyWith(isSaving: false);
       
-      // Kembalikan argumen untuk Summary Page
       return SessionSummaryArgs(
         workoutName: state.workoutName,
         durationSeconds: state.elapsedSeconds,
