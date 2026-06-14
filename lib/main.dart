@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uas_mobile_programing/features/workout/pages/active_session_page.dart';
 import 'package:uas_mobile_programing/features/workout/pages/create_workout_page.dart';
 
 import 'features/auth/providers/auth_provider.dart';
@@ -66,10 +67,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/active-session/:id',
-      builder: (context, state) => Scaffold(
-        appBar: AppBar(title: const Text('Active Session')),
-        body: Center(child: Text('Under Construction: Session ID ${state.pathParameters['id']}')),
-      ),
+      builder: (context, state) {
+        final id = state.pathParameters['id'];
+        return ActiveSessionPage(templateId: id); // Panggil halaman asli
+      },
     ),
   ],
 );
