@@ -1,8 +1,11 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_profile.dart';
 
 class ProfileService {
   final SupabaseClient _supabase = Supabase.instance.client;
+
+  static const String _bucket = 'avatars';
 
   /// Cek apakah profil sudah ada untuk user yang sedang login
   Future<bool> hasProfile(String userId) async {
@@ -37,5 +40,30 @@ class ProfileService {
         .from('profiles')
         .update(profile.toJson())
         .eq('id', profile.id);
+  }
+
+  /// Upload foto profil ke Supabase Storage, kembalikan URL publik
+  Future<String> uploadAvatar({
+    required String userId,
+    required Uint8List fileBytes,
+    required String fileName,
+  }) async {
+    final ext = fileName.split('.').last.toLowerCase();
+    final path = '$userId/avatar.$ext';
+
+    // Upload (upsert agar bisa replace foto lama)
+    await _supabase.storage.from(_bucket).uploadBinary(
+          path,
+          fileBytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: 'image/$ext',
+          ),
+        );
+
+    // Ambil public URL
+    final publicUrl = _supabase.storage.from(_bucket).getPublicUrl(path);
+    // Tambahkan timestamp agar tidak ter-cache browser
+    return '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
   }
 }
