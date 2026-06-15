@@ -11,30 +11,23 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        // Mengaktifkan desugaring library
-        isCoreLibraryDesugaringEnabled = true 
-        
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // Dikembalikan ke kotlinOptions bawaan dengan perbaikan sintaks tanda '='
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://android.com).
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.uas_mobile_programing"
         // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        
-        // Memperbaiki error sintaksis multiDex
-        multiDexEnabled = true
     }
 
     buildTypes {
@@ -49,8 +42,3 @@ android {
 flutter {
     source = "../.."
 }
-
-dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-}
-

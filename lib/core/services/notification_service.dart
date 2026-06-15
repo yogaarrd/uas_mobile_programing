@@ -7,10 +7,11 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> init() async {
-    if (kIsWeb) return; // Abaikan setup native jika di Web
+    if (kIsWeb) return;
 
+    // Ganti '@mipmap/ic_launcher' menjadi nama ikon default bawaan sistem Android berikut:
     const AndroidInitializationSettings androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('app_icon');
     
     const DarwinInitializationSettings iosInit = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -51,6 +52,7 @@ class NotificationService {
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
+      icon: 'app_icon',
     );
 
     const NotificationDetails platformDetails = NotificationDetails(
