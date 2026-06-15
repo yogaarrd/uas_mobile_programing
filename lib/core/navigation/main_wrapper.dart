@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'bottom_nav_provider.dart';
 import '../../features/home/pages/home_page.dart';
-import '../../features/workout/pages/history_page.dart'; // Import halamanmu
 import '../../features/workout/pages/progress_page.dart';
 import '../../features/profile/pages/profile_page.dart';
 import '../../core/theme/app_theme.dart'; // Import AppTheme kita
+import '../../features/history/pages/workout_history_page.dart'; // Import halaman history yang sudah kamu buat
 
 class MainWrapper extends ConsumerWidget {
   const MainWrapper({super.key});
@@ -16,7 +16,7 @@ class MainWrapper extends ConsumerWidget {
 
     final List<Widget> pages = const [
       HomePage(),
-      HistoryPage(),
+      WorkoutHistoryPage(),
       ProgressPage(),
       ProfilePage(),
     ];
