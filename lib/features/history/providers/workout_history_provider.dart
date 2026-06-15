@@ -1,24 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// TODO: Pastikan path ini sesuai
 import '../models/workout_session.dart';
+import 'selected_date_provider.dart'; 
 
 class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
   bool _hasMore = true;
   bool get hasMore => _hasMore;
   
   int _currentPage = 0;
-  final int _pageSize = 10; // Ambil 10 data setiap kali load
+  final int _pageSize = 10;
   bool _isFetching = false;
 
   @override
   Future<List<WorkoutSession>> build() async {
+    // Watch perubahan tanggal agar otomatis reload
+    final selectedDate = ref.watch(selectedDateProvider);
     _currentPage = 0;
     _hasMore = true;
-    return _fetchData(page: 0);
+    return _fetchData(page: 0, filterDate: selectedDate);
   }
 
-  Future<List<WorkoutSession>> _fetchData({required int page}) async {
+  // PERBAIKAN 1: Tambahkan filterDate di sini
+  Future<List<WorkoutSession>> _fetchData({required int page, DateTime? filterDate}) async {
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
 
@@ -27,16 +30,23 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
     final from = page * _pageSize;
     final to = from + _pageSize - 1;
 
-    final response = await supabase
+    // Siapkan query
+    var query = supabase
         .from('workout_sessions')
         .select()
         .eq('user_id', userId)
-        .order('started_at', ascending: false)
-        .range(from, to); // Pagination Supabase
+        .order('started_at', ascending: false);
 
+    // Filter tanggal
+    if (filterDate != null) {
+      final startOfDay = DateTime(filterDate.year, filterDate.month, filterDate.day).toIso8601String();
+      final endOfDay = DateTime(filterDate.year, filterDate.month, filterDate.day, 23, 59, 59).toIso8601String();
+      query = query.gte('started_at', startOfDay).lte('started_at', endOfDay);
+    }
+
+    final response = await query.range(from, to);
     final data = (response as List).map((json) => WorkoutSession.fromJson(json)).toList();
 
-    // Kalau data yang ditarik kurang dari 10, berarti sudah mentok
     if (data.length < _pageSize) {
       _hasMore = false;
     }
@@ -44,17 +54,17 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
     return data;
   }
 
-  // Fungsi ini dipanggil saat user nge-scroll ke paling bawah
   Future<void> fetchMore() async {
-    if (_isFetching || !_hasMore) return; // Cegah double load
+    if (_isFetching || !_hasMore) return;
 
     _isFetching = true;
 
     try {
       _currentPage++;
-      final newData = await _fetchData(page: _currentPage);
+      // PERBAIKAN 2: Ambil filterDate saat ini dari provider agar saat loadmore filter tetap jalan
+      final selectedDate = ref.read(selectedDateProvider);
+      final newData = await _fetchData(page: _currentPage, filterDate: selectedDate);
       
-      // Gabungkan data lama dengan data baru
       final currentData = state.value ?? [];
       state = AsyncData([...currentData, ...newData]);
     } catch (e, st) {
