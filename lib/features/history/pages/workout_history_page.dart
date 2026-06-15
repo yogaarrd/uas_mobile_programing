@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/workout_history_provider.dart';
+import 'session_detail_page.dart'; // Import halaman detail sesi
 
 class WorkoutHistoryPage extends ConsumerStatefulWidget {
   const WorkoutHistoryPage({super.key});
@@ -114,8 +115,14 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          // Nanti kita arahkan ke halaman Detail Sesi (HIS-02)
+       onTap: () {
+          // Navigasi ke halaman detail
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SessionDetailPage(session: session),
+            ),
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
