@@ -68,58 +68,72 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
         data: (sessions) {
           return Column(
             children: [
-              // 1. Komponen Kalender Bulanan
-              TableCalendar(
-                firstDay: DateTime.utc(2025, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
-                focusedDay: _focusedDay,
-                calendarFormat: CalendarFormat.month,
-                selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-                onDaySelected: (selectedDateTime, focusedDateTime) {
-                  setState(() {
-                    _focusedDay = focusedDateTime;
-                  });
-                  // Gunakan .setDate() dari fungsi yang baru kita buat
-                  ref
-                      .read(selectedDateProvider.notifier)
-                      .setDate(selectedDateTime);
-                },
-                eventLoader: (day) {
-                  final events = ref.watch(workoutDatesProvider).value ?? {};
-                  return events[DateTime(day.year, day.month, day.day)] ?? [];
-                },
-                calendarStyle: const CalendarStyle(
-                  markerDecoration: BoxDecoration(
-                    color: AppTheme.neonGreen,
-                    shape: BoxShape.circle,
+              // 1. Komponen Kalender Bulanan yang sudah direvisi tingginya
+              SizedBox(
+                height:
+                    320, // Membatasi tinggi kalender agar tidak memakan layar
+                child: TableCalendar(
+                  firstDay: DateTime.utc(2025, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  calendarFormat: CalendarFormat.month,
+                  rowHeight: 40, // Membuat baris tanggal lebih rapat
+                  selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+                  onDaySelected: (selectedDateTime, focusedDateTime) {
+                    setState(() => _focusedDay = focusedDateTime);
+                    ref
+                        .read(selectedDateProvider.notifier)
+                        .setDate(selectedDateTime);
+                  },
+                  eventLoader: (day) {
+                    final events = ref.watch(workoutDatesProvider).value ?? {};
+                    return events[DateTime(day.year, day.month, day.day)] ?? [];
+                  },
+                  calendarStyle: const CalendarStyle(
+                    markerDecoration: BoxDecoration(
+                      color: AppTheme.neonGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.white24,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: AppTheme.neonGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    defaultTextStyle: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                    weekendTextStyle: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
                   ),
-                  todayDecoration: BoxDecoration(
-                    color: Colors.white24,
-                    shape: BoxShape.circle,
-                  ),
-                  selectedDecoration: BoxDecoration(
-                    color: AppTheme.neonGreen,
-                    shape: BoxShape.circle,
-                  ),
-                  defaultTextStyle: TextStyle(color: Colors.white),
-                  weekendTextStyle: TextStyle(color: Colors.white70),
-                ),
-                headerStyle: const HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                  titleTextStyle: TextStyle(color: Colors.white, fontSize: 16),
-                  // PERBAIKAN: Gunakan properti ini sebagai ganti iconColor
-                  leftChevronIcon: Icon(
-                    Icons.chevron_left,
-                    color: Colors.white,
-                  ),
-                  rightChevronIcon: Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    headerPadding:
+                        EdgeInsets.zero, // Menghilangkan padding header
+                    titleTextStyle: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                    leftChevronIcon: Icon(
+                      Icons.chevron_left,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    rightChevronIcon: Icon(
+                      Icons.chevron_right,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
-              const Divider(color: Colors.white12, height: 20, thickness: 1),
+              const Divider(color: Colors.white12, height: 1, thickness: 1),
 
               // 2. Daftar Riwayat Latihan
               Expanded(
@@ -153,7 +167,7 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppTheme.neonGreen),
         ),
-        error: (error, stack) => Center(
+        error: (error, _) => Center(
           child: Text(
             'Error: $error',
             style: const TextStyle(color: Colors.red),
@@ -163,6 +177,7 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
     );
   }
 
+  // --- Helper Widgets tetap sama ---
   Widget _buildEmptyState(bool isFiltered) {
     return Center(
       child: Column(
@@ -199,14 +214,12 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SessionDetailPage(session: session),
-            ),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SessionDetailPage(session: session),
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

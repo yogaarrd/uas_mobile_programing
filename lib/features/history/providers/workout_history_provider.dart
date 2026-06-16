@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/workout_session.dart';
-import 'selected_date_provider.dart'; 
+import 'selected_date_provider.dart';
 
 class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
   bool _hasMore = true;
   bool get hasMore => _hasMore;
-  
+
   int _currentPage = 0;
   final int _pageSize = 10;
   bool _isFetching = false;
@@ -21,7 +21,11 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
   }
 
   // PERBAIKAN 1: Tambahkan filterDate di sini
-  Future<List<WorkoutSession>> _fetchData({required int page, DateTime? filterDate}) async {
+  // PERBAIKAN 1: Tambahkan filterDate di sini
+  Future<List<WorkoutSession>> _fetchData({
+    required int page,
+    DateTime? filterDate,
+  }) async {
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
 
@@ -30,22 +34,38 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
     final from = page * _pageSize;
     final to = from + _pageSize - 1;
 
-    // Siapkan query
+    // 1. Siapkan query dasar dan filter pertama (eq)
     var query = supabase
         .from('workout_sessions')
         .select()
-        .eq('user_id', userId)
-        .order('started_at', ascending: false);
+        .eq('user_id', userId);
 
-    // Filter tanggal
+    // 2. Tambahkan filter tanggal (gte & lte) JIKA ADA
     if (filterDate != null) {
-      final startOfDay = DateTime(filterDate.year, filterDate.month, filterDate.day).toIso8601String();
-      final endOfDay = DateTime(filterDate.year, filterDate.month, filterDate.day, 23, 59, 59).toIso8601String();
+      final startOfDay = DateTime(
+        filterDate.year,
+        filterDate.month,
+        filterDate.day,
+      ).toIso8601String();
+      final endOfDay = DateTime(
+        filterDate.year,
+        filterDate.month,
+        filterDate.day,
+        23,
+        59,
+        59,
+      ).toIso8601String();
       query = query.gte('started_at', startOfDay).lte('started_at', endOfDay);
     }
 
-    final response = await query.range(from, to);
-    final data = (response as List).map((json) => WorkoutSession.fromJson(json)).toList();
+    // 3. TERAKHIR, pasang modifier (order dan range) lalu eksekusi (await)
+    final response = await query
+        .order('started_at', ascending: false)
+        .range(from, to);
+
+    final data = (response as List)
+        .map((json) => WorkoutSession.fromJson(json))
+        .toList();
 
     if (data.length < _pageSize) {
       _hasMore = false;
@@ -63,8 +83,11 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
       _currentPage++;
       // PERBAIKAN 2: Ambil filterDate saat ini dari provider agar saat loadmore filter tetap jalan
       final selectedDate = ref.read(selectedDateProvider);
-      final newData = await _fetchData(page: _currentPage, filterDate: selectedDate);
-      
+      final newData = await _fetchData(
+        page: _currentPage,
+        filterDate: selectedDate,
+      );
+
       final currentData = state.value ?? [];
       state = AsyncData([...currentData, ...newData]);
     } catch (e, st) {
@@ -75,6 +98,7 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
   }
 }
 
-final workoutHistoryProvider = AsyncNotifierProvider<WorkoutHistoryNotifier, List<WorkoutSession>>(() {
-  return WorkoutHistoryNotifier();
-});
+final workoutHistoryProvider =
+    AsyncNotifierProvider<WorkoutHistoryNotifier, List<WorkoutSession>>(() {
+      return WorkoutHistoryNotifier();
+    });
