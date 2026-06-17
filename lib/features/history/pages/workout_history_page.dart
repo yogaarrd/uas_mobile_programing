@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/workout_history_provider.dart';
-import 'session_detail_page.dart'; // Import halaman detail sesi
+import '../providers/workout_calendar_provider.dart';
+import '../providers/selected_date_provider.dart';
+import 'session_detail_page.dart';
 
 class WorkoutHistoryPage extends ConsumerStatefulWidget {
   const WorkoutHistoryPage({super.key});
@@ -14,15 +17,14 @@ class WorkoutHistoryPage extends ConsumerStatefulWidget {
 
 class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
   final ScrollController _scrollController = ScrollController();
+  DateTime _focusedDay = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    // Dengarkan gerakan scroll
     _scrollController.addListener(() {
-      // Jika scroll sudah mendekati paling bawah (sisa 200 pixel)
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        // [PERBAIKAN 1]: Bungkus dengan microtask agar tidak menabrak proses build UI
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
         Future.microtask(() {
           ref.read(workoutHistoryProvider.notifier).fetchMore();
         });
@@ -39,74 +41,171 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final historyAsync = ref.watch(workoutHistoryProvider);
-    
-    // [PERBAIKAN 2]: Ambil hasMore di luar itemBuilder menggunakan ref.watch
     final hasMore = ref.watch(workoutHistoryProvider.notifier).hasMore;
+    final selectedDay = ref.watch(selectedDateProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         backgroundColor: AppTheme.darkBackground,
         elevation: 0,
-        title: const Text('Workout History', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Workout History',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          if (selectedDay != null)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              tooltip: 'Tampilkan Semua',
+              onPressed: () {
+                ref.read(selectedDateProvider.notifier).setDate(null);
+              },
+            ),
+        ],
       ),
       body: historyAsync.when(
         data: (sessions) {
-          if (sessions.isEmpty) return _buildEmptyState();
+          return Column(
+            children: [
+              // 1. Komponen Kalender Bulanan yang sudah direvisi tingginya
+              SizedBox(
+                height:
+                    320, // Membatasi tinggi kalender agar tidak memakan layar
+                child: TableCalendar(
+                  firstDay: DateTime.utc(2025, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  calendarFormat: CalendarFormat.month,
+                  rowHeight: 40, // Membuat baris tanggal lebih rapat
+                  selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+                  onDaySelected: (selectedDateTime, focusedDateTime) {
+                    setState(() => _focusedDay = focusedDateTime);
+                    ref
+                        .read(selectedDateProvider.notifier)
+                        .setDate(selectedDateTime);
+                  },
+                  eventLoader: (day) {
+                    final events = ref.watch(workoutDatesProvider).value ?? {};
+                    return events[DateTime(day.year, day.month, day.day)] ?? [];
+                  },
+                  calendarStyle: const CalendarStyle(
+                    markerDecoration: BoxDecoration(
+                      color: AppTheme.neonGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.white24,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: AppTheme.neonGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    defaultTextStyle: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                    weekendTextStyle: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    headerPadding:
+                        EdgeInsets.zero, // Menghilangkan padding header
+                    titleTextStyle: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                    leftChevronIcon: Icon(
+                      Icons.chevron_left,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    rightChevronIcon: Icon(
+                      Icons.chevron_right,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              const Divider(color: Colors.white12, height: 1, thickness: 1),
 
-          return ListView.builder(
-            controller: _scrollController, 
-            padding: const EdgeInsets.all(16),
-            itemCount: sessions.length + 1, 
-            itemBuilder: (context, index) {
-              if (index < sessions.length) {
-                return _buildHistoryCard(sessions[index]);
-              } else {
-                // Panggil variabel hasMore yang sudah diambil secara aman di atas
-                return hasMore 
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
-                        child: Center(child: CircularProgressIndicator(color: AppTheme.neonGreen)),
-                      )
-                    : const SizedBox(); 
-              }
-            },
+              // 2. Daftar Riwayat Latihan
+              Expanded(
+                child: sessions.isEmpty
+                    ? _buildEmptyState(selectedDay != null)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: sessions.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index < sessions.length) {
+                            return _buildHistoryCard(sessions[index]);
+                          } else {
+                            return hasMore
+                                ? const Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppTheme.neonGreen,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox();
+                          }
+                        },
+                      ),
+              ),
+            ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.neonGreen)),
-        error: (error, stack) => Center(child: Text('Error: $error', style: const TextStyle(color: Colors.red))),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.neonGreen),
+        ),
+        error: (error, _) => Center(
+          child: Text(
+            'Error: $error',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
       ),
     );
   }
 
-  // Widget untuk Empty State
-  Widget _buildEmptyState() {
+  // --- Helper Widgets tetap sama ---
+  Widget _buildEmptyState(bool isFiltered) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.fitness_center, size: 80, color: Colors.grey.withOpacity(0.5)),
-          const SizedBox(height: 16),
-          const Text(
-            'Belum ada riwayat latihan.',
-            style: TextStyle(color: Colors.white70, fontSize: 18),
+          Icon(
+            Icons.fitness_center,
+            size: 80,
+            color: Colors.grey.withOpacity(0.5),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Mulai sesi latihan pertamamu hari ini!',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+          const SizedBox(height: 16),
+          Text(
+            isFiltered
+                ? 'Tidak ada latihan di tanggal ini.'
+                : 'Belum ada riwayat latihan.',
+            style: const TextStyle(color: Colors.white70, fontSize: 18),
           ),
         ],
       ),
     );
   }
 
-  // Widget untuk Card History
   Widget _buildHistoryCard(dynamic session) {
-    final dateFormatted = DateFormat('dd MMM yyyy, EEEE').format(session.startedAt);
-    
-    final durationMinutes = session.durationSeconds != null 
-        ? (session.durationSeconds! / 60).floor() 
+    final dateFormatted = DateFormat(
+      'dd MMM yyyy, EEEE',
+    ).format(session.startedAt);
+    final durationMinutes = session.durationSeconds != null
+        ? (session.durationSeconds! / 60).floor()
         : 0;
 
     return Card(
@@ -115,15 +214,12 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-       onTap: () {
-          // Navigasi ke halaman detail
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SessionDetailPage(session: session),
-            ),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SessionDetailPage(session: session),
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -131,36 +227,31 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
             children: [
               Text(
                 dateFormatted,
-                style: const TextStyle(color: AppTheme.neonGreen, fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(
+                  color: AppTheme.neonGreen,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 8),
-              
               Text(
                 session.name,
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              
-              if (session.notes != null && session.notes!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                  child: Text(
-                    '"${session.notes}"',
-                    style: const TextStyle(
-                      color: Colors.white70, 
-                      fontStyle: FontStyle.italic,
-                      fontSize: 14,
-                    ),
-                  ),
-                )
-              else
-                const SizedBox(height: 16),
-              
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildStatItem(Icons.timer_outlined, '$durationMinutes mnt'),
-                  _buildStatItem(Icons.fitness_center, '${session.totalVolumeKg} kg'),
-                  _buildStatItem(Icons.list_alt, '? Latihan'), 
+                  _buildStatItem(
+                    Icons.fitness_center,
+                    '${session.totalVolumeKg} kg',
+                  ),
+                  _buildStatItem(Icons.list_alt, 'Detail Sesi'),
                 ],
               ),
             ],
