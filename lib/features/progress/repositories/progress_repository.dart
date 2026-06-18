@@ -76,4 +76,60 @@ class ProgressRepository {
 
     return ProgressOverviewData(stats: stats, exercises: exercisesList);
   }
+
+  // === FITUR BARU [PRG-02]: AMBIL PROGRESS PER EXERCISE ===
+  Future<List<ExerciseProgressPoint>> getExerciseProgress(String exerciseId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User belum login');
+
+    // Ambil session_exercises yang terhubung dengan workout_sessions (milik user) dan session_sets
+    final response = await _supabase
+        .from('session_exercises')
+        .select('''
+          workout_sessions!inner(started_at, user_id),
+          session_sets(weight, reps, is_completed)
+        ''')
+        .eq('exercise_id', exerciseId)
+        .eq('workout_sessions.user_id', userId);
+
+    final List<dynamic> data = response as List<dynamic>;
+    List<ExerciseProgressPoint> points = [];
+
+    for (var row in data) {
+      final session = row['workout_sessions'];
+      if (session == null) continue;
+      
+      final dateStr = session['started_at'] as String;
+      final date = DateTime.parse(dateStr).toLocal();
+
+      final setsList = row['session_sets'] as List<dynamic>? ?? [];
+      double maxWeight = 0;
+      int totalReps = 0;
+      int completedSetsCount = 0;
+
+      for (var s in setsList) {
+        if (s['is_completed'] == true) {
+          completedSetsCount++;
+          final w = (s['weight'] as num?)?.toDouble() ?? 0.0;
+          final r = (s['reps'] as num?)?.toInt() ?? 0;
+          totalReps += r;
+          if (w > maxWeight) maxWeight = w;
+        }
+      }
+
+      // Hanya catat sesi yang minimal ada 1 set sukses selesai
+      if (completedSetsCount > 0) {
+        points.add(ExerciseProgressPoint(
+          date: date,
+          maxWeight: maxWeight,
+          totalReps: totalReps,
+          totalSets: completedSetsCount,
+        ));
+      }
+    }
+
+    // Urutkan dari tanggal TERLAMA ke TERBARU agar grafik garis mengalir ke kanan dengan benar
+    points.sort((a, b) => a.date.compareTo(b.date));
+    return points;
+  }
 }

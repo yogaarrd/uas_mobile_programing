@@ -35,3 +35,17 @@ class ProgressOverviewData {
     required this.exercises,
   });
 }
+
+class ExerciseProgressPoint {
+  final DateTime date;
+  final double maxWeight;
+  final int totalReps;
+  final int totalSets;
+
+  ExerciseProgressPoint({
+    required this.date,
+    required this.maxWeight,
+    required this.totalReps,
+    required this.totalSets,
+  });
+}
