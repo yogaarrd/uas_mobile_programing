@@ -10,3 +10,8 @@ final progressOverviewProvider = FutureProvider<ProgressOverviewData>((ref) asyn
   final repo = ref.read(progressRepositoryProvider);
   return repo.getProgressOverview();
 });
+
+final exerciseProgressProvider = FutureProvider.family<List<ExerciseProgressPoint>, String>((ref, exerciseId) async {
+  final repo = ref.read(progressRepositoryProvider);
+  return repo.getExerciseProgress(exerciseId);
+});
