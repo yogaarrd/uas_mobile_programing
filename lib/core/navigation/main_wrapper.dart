@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'bottom_nav_provider.dart';
 import '../../features/home/pages/home_page.dart';
-import '../../features/workout/pages/progress_page.dart';
+import '../../features/progress/pages/progress_page.dart';
 import '../../features/profile/pages/profile_page.dart';
 import '../../core/theme/app_theme.dart'; // Import AppTheme kita
 import '../../features/history/pages/workout_history_page.dart'; // Import halaman history yang sudah kamu buat

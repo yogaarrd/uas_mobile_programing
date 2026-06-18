@@ -25,6 +25,9 @@ import 'core/services/notification_service.dart';
 import 'features/workout/pages/session_summary_page.dart';
 import 'features/workout/models/session_summary_args.dart';
 
+// Progress
+import 'features/progress/pages/exercise_progress_detail_page.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
@@ -68,6 +71,14 @@ final GoRouter _router = GoRouter(
         // Ambil extra arguments yang dikirim
         final args = state.extra as SessionSummaryArgs;
         return SessionSummaryPage(args: args);
+      },
+    ),
+    GoRoute(
+      path: '/progress/exercise/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final name = state.extra as String? ?? 'Detail Latihan';
+        return ExerciseProgressDetailPage(exerciseId: id, exerciseName: name);
       },
     ),
 
