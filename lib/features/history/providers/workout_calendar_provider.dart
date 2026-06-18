@@ -19,7 +19,7 @@ final workoutDatesProvider = FutureProvider<Map<DateTime, List<dynamic>>>((ref) 
   for (var item in data) {
     if (item['started_at'] != null) {
       final dateStr = item['started_at'] as String;
-      final date = DateTime.parse(dateStr);
+      final date = DateTime.parse(dateStr).toLocal();
       // Lakukan normalisasi jam menjadi 00:00 agar pencocokan tanggal di kalender akurat
       final normalizedDate = DateTime(date.year, date.month, date.day);
 

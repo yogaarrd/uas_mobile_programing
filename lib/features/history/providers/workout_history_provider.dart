@@ -42,20 +42,22 @@ class WorkoutHistoryNotifier extends AsyncNotifier<List<WorkoutSession>> {
 
     // 2. Tambahkan filter tanggal (gte & lte) JIKA ADA
     if (filterDate != null) {
-      final startOfDay = DateTime(
+      final startOfDayUtc = DateTime(
         filterDate.year,
         filterDate.month,
         filterDate.day,
-      ).toIso8601String();
-      final endOfDay = DateTime(
+      ).toUtc().toIso8601String();
+
+      final endOfDayUtc = DateTime(
         filterDate.year,
         filterDate.month,
         filterDate.day,
         23,
         59,
         59,
-      ).toIso8601String();
-      query = query.gte('started_at', startOfDay).lte('started_at', endOfDay);
+      ).toUtc().toIso8601String();
+
+      query = query.gte('started_at', startOfDayUtc).lte('started_at', endOfDayUtc);
     }
 
     // 3. TERAKHIR, pasang modifier (order dan range) lalu eksekusi (await)
