@@ -132,4 +132,62 @@ class ProgressRepository {
     points.sort((a, b) => a.date.compareTo(b.date));
     return points;
   }
+  // === FITUR BARU [PRG-03]: CEK PR BARU SETELAH SESI SELESAI ===
+  Future<List<String>> checkNewPRsForSession(String sessionId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    // 1. Ambil data angkatan pada sesi yang baru saja selesai
+    final currentSessionResp = await _supabase
+        .from('session_exercises')
+        .select('exercise_id, exercises(name), session_sets(weight, is_completed)')
+        .eq('session_id', sessionId);
+
+    List<String> exercisesWithNewPR = [];
+
+    for (var row in currentSessionResp) {
+      final exId = row['exercise_id'];
+      final exName = row['exercises']['name'];
+      final sets = row['session_sets'] as List<dynamic>? ?? [];
+
+      // Cari angkatan maksimal di sesi ini
+      double currentMax = 0;
+      for (var s in sets) {
+        if (s['is_completed'] == true) {
+          final w = (s['weight'] as num?)?.toDouble() ?? 0.0;
+          if (w > currentMax) currentMax = w;
+        }
+      }
+
+      if (currentMax == 0) continue; // Skip kalau tidak ada angkatan sukses
+
+      // 2. Ambil seluruh histori angkatan latihan ini di sesi-sesi SEBELUMNYA
+      final historyResp = await _supabase
+          .from('session_exercises')
+          .select('session_sets(weight, is_completed), workout_sessions!inner(started_at)')
+          .eq('exercise_id', exId)
+          .eq('workout_sessions.user_id', userId)
+          .neq('session_id', sessionId); // Jangan menghitung sesi saat ini
+
+      double historicalMax = 0;
+      for (var hRow in historyResp) {
+        final hSets = hRow['session_sets'] as List<dynamic>? ?? [];
+        for (var hs in hSets) {
+          if (hs['is_completed'] == true) {
+            final hw = (hs['weight'] as num?)?.toDouble() ?? 0.0;
+            if (hw > historicalMax) historicalMax = hw;
+          }
+        }
+      }
+
+      // 3. Bandingkan, apakah angkatan sesi ini LEBIH BESAR dari max histori?
+      // Bisa diganti menjadi >= jika menyamai rekor lama juga ingin dianggap PR
+      if (currentMax > historicalMax) {
+        exercisesWithNewPR.add(exName);
+      }
+    }
+
+    // Mengembalikan list nama exercise yang pecah rekor (misal: ["Bench Press", "Squat"])
+    return exercisesWithNewPR;
+  }
 }

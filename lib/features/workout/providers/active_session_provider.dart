@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:math'; 
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/exercise_models.dart';
 import '../repositories/workout_repository.dart';
 import 'workout_provider.dart';
 import '../../../core/services/notification_service.dart';
 import '../models/session_summary_args.dart';
+import '../../progress/providers/progress_provider.dart';
 
 class ActiveSet {
   int reps;
@@ -13,9 +14,19 @@ class ActiveSet {
   int restSeconds;
   bool isCompleted;
 
-  ActiveSet({required this.reps, required this.weight, required this.restSeconds, this.isCompleted = false});
+  ActiveSet({
+    required this.reps,
+    required this.weight,
+    required this.restSeconds,
+    this.isCompleted = false,
+  });
 
-  ActiveSet copyWith({int? reps, double? weight, int? restSeconds, bool? isCompleted}) {
+  ActiveSet copyWith({
+    int? reps,
+    double? weight,
+    int? restSeconds,
+    bool? isCompleted,
+  }) {
     return ActiveSet(
       reps: reps ?? this.reps,
       weight: weight ?? this.weight,
@@ -32,7 +43,10 @@ class ActiveExercise {
   ActiveExercise({required this.exercise, required this.sets});
 
   ActiveExercise copyWith({ExerciseModel? exercise, List<ActiveSet>? sets}) {
-    return ActiveExercise(exercise: exercise ?? this.exercise, sets: sets ?? this.sets);
+    return ActiveExercise(
+      exercise: exercise ?? this.exercise,
+      sets: sets ?? this.sets,
+    );
   }
 }
 
@@ -86,20 +100,24 @@ class ActiveSessionState {
       isLoading: isLoading ?? this.isLoading,
       isTransitioning: isTransitioning ?? this.isTransitioning,
       transitionMessage: transitionMessage ?? this.transitionMessage,
-      transitionSecondsRemaining: transitionSecondsRemaining ?? this.transitionSecondsRemaining,
+      transitionSecondsRemaining:
+          transitionSecondsRemaining ?? this.transitionSecondsRemaining,
       isSaving: isSaving ?? this.isSaving,
     );
   }
 
   int get totalSets => exercises.fold(0, (sum, ex) => sum + ex.sets.length);
-  int get completedSets => exercises.fold(0, (sum, ex) => sum + ex.sets.where((s) => s.isCompleted).length);
+  int get completedSets => exercises.fold(
+    0,
+    (sum, ex) => sum + ex.sets.where((s) => s.isCompleted).length,
+  );
   double get progress => totalSets == 0 ? 0 : completedSets / totalSets;
 
   ActiveExercise? get currentExercise {
     try {
       return exercises.firstWhere((ex) => ex.sets.any((s) => !s.isCompleted));
     } catch (_) {
-      return null; 
+      return null;
     }
   }
 
@@ -142,26 +160,45 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
 
         final name = data['name'] as String;
         final rawExercises = data['template_exercises'] as List;
-        rawExercises.sort((a, b) => (a['order_index'] as int).compareTo(b['order_index'] as int));
+        rawExercises.sort(
+          (a, b) =>
+              (a['order_index'] as int).compareTo(b['order_index'] as int),
+        );
 
         List<ActiveExercise> loadedExercises = [];
         for (var te in rawExercises) {
           final exModel = ExerciseModel.fromMap(te['exercises']);
           final rawSets = te['exercise_sets'] as List;
-          rawSets.sort((a, b) => (a['set_number'] as int).compareTo(b['set_number'] as int));
+          rawSets.sort(
+            (a, b) =>
+                (a['set_number'] as int).compareTo(b['set_number'] as int),
+          );
 
-          List<ActiveSet> loadedSets = rawSets.map((s) => ActiveSet(
-            reps: s['reps'] ?? 0,
-            weight: (s['weight'] as num).toDouble(),
-            restSeconds: s['rest_seconds'] ?? 60,
-          )).toList();
+          List<ActiveSet> loadedSets = rawSets
+              .map(
+                (s) => ActiveSet(
+                  reps: s['reps'] ?? 0,
+                  weight: (s['weight'] as num).toDouble(),
+                  restSeconds: s['rest_seconds'] ?? 60,
+                ),
+              )
+              .toList();
 
-          loadedExercises.add(ActiveExercise(exercise: exModel, sets: loadedSets));
+          loadedExercises.add(
+            ActiveExercise(exercise: exModel, sets: loadedSets),
+          );
         }
 
-        state = state.copyWith(workoutName: name, exercises: loadedExercises, isLoading: false);
+        state = state.copyWith(
+          workoutName: name,
+          exercises: loadedExercises,
+          isLoading: false,
+        );
       } catch (e) {
-        state = state.copyWith(isLoading: false, workoutName: 'Error Loading Template');
+        state = state.copyWith(
+          isLoading: false,
+          workoutName: 'Error Loading Template',
+        );
       }
     } else {
       state = state.copyWith(isLoading: false);
@@ -194,17 +231,21 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
   void addSet(int exIndex) {
     final list = List<ActiveExercise>.from(state.exercises);
     final ex = list[exIndex];
-    
+
     // Copy data dari set terakhir untuk mempercepat input user
     ActiveSet newSet = ActiveSet(reps: 0, weight: 0, restSeconds: 60);
     if (ex.sets.isNotEmpty) {
       final last = ex.sets.last;
-      newSet = ActiveSet(reps: last.reps, weight: last.weight, restSeconds: last.restSeconds);
+      newSet = ActiveSet(
+        reps: last.reps,
+        weight: last.weight,
+        restSeconds: last.restSeconds,
+      );
     }
-    
+
     final updatedSets = List<ActiveSet>.from(ex.sets)..add(newSet);
     list[exIndex] = ex.copyWith(sets: updatedSets);
-    
+
     state = state.copyWith(exercises: list);
   }
 
@@ -220,10 +261,10 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     final list = List<ActiveExercise>.from(state.exercises);
     final ex = list[exIndex];
     final currentSet = ex.sets[setIndex];
-    
+
     final isNowCompleted = !currentSet.isCompleted;
     ex.sets[setIndex] = currentSet.copyWith(isCompleted: isNowCompleted);
-    
+
     state = state.copyWith(exercises: list);
 
     if (isNowCompleted) {
@@ -235,7 +276,10 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
 
   void updateSetActuals(int exIndex, int setIndex, int reps, double weight) {
     final list = List<ActiveExercise>.from(state.exercises);
-    list[exIndex].sets[setIndex] = list[exIndex].sets[setIndex].copyWith(reps: reps, weight: weight);
+    list[exIndex].sets[setIndex] = list[exIndex].sets[setIndex].copyWith(
+      reps: reps,
+      weight: weight,
+    );
     state = state.copyWith(exercises: list);
   }
 
@@ -243,20 +287,24 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
     if (seconds <= 0) return;
     _restTimer?.cancel();
     state = state.copyWith(isResting: true, restSecondsRemaining: seconds);
-    
+
     _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.restSecondsRemaining > 1) {
-        state = state.copyWith(restSecondsRemaining: state.restSecondsRemaining - 1);
+        state = state.copyWith(
+          restSecondsRemaining: state.restSecondsRemaining - 1,
+        );
       } else {
         NotificationService.showRestFinishedNotification();
-        _showTransitionSplash(); 
+        _showTransitionSplash();
       }
     });
   }
 
   void addRestTime(int seconds) {
     if (state.isResting) {
-      state = state.copyWith(restSecondsRemaining: state.restSecondsRemaining + seconds);
+      state = state.copyWith(
+        restSecondsRemaining: state.restSecondsRemaining + seconds,
+      );
     }
   }
 
@@ -280,9 +328,9 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
       "Jangan berhenti saat lelah! 💯",
       "Fokus! Hasil menunggumu! ✨",
       "Batasmu hanya ada di pikiranmu! 🚀",
-      "Keringat hari ini adalah kekuatan besok! 💦"
+      "Keringat hari ini adalah kekuatan besok! 💦",
     ];
-    
+
     final quote = quotes[Random().nextInt(quotes.length)];
     final durationSeconds = Random().nextInt(3) + 3;
 
@@ -296,16 +344,23 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
 
     _transitionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.transitionSecondsRemaining > 1) {
-        state = state.copyWith(transitionSecondsRemaining: state.transitionSecondsRemaining - 1);
+        state = state.copyWith(
+          transitionSecondsRemaining: state.transitionSecondsRemaining - 1,
+        );
       } else {
         timer.cancel();
-        state = state.copyWith(isTransitioning: false, transitionSecondsRemaining: 0);
+        state = state.copyWith(
+          isTransitioning: false,
+          transitionSecondsRemaining: 0,
+        );
       }
     });
   }
 
   // MENGGANTI FUNGSI finishWorkout()
-  Future<SessionSummaryArgs?> finishWorkout({bool updateTemplate = false}) async {
+  Future<SessionSummaryArgs?> finishWorkout({
+    bool updateTemplate = false,
+  }) async {
     _sessionTimer?.cancel();
     _restTimer?.cancel();
     _transitionTimer?.cancel();
@@ -344,7 +399,7 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
       }
 
       final repo = ref.read(workoutRepositoryProvider);
-      
+
       // 1. Simpan Sesi Historis
       final result = await repo.saveWorkoutSession(
         templateId: state.templateId,
@@ -354,29 +409,44 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState> {
         exercisesData: exData,
       );
 
+      // ========================================================
+      // INTEGRASI KITA [PRG-03]: CEK PR SETELAH SESI DISIMPAN
+      // ========================================================
+      final sessionId = result['id'] ?? result['session_id']; 
+      List<String> prList = [];
+
+      if (sessionId != null) {
+        prList = await ref.read(progressRepositoryProvider).checkNewPRsForSession(sessionId.toString());
+      } else if (result['pr_messages'] != null) {
+        prList = List<String>.from(result['pr_messages']);
+      }
+      // ========================================================
+
       // 2. [FITUR BARU] Update Template Asli jika diminta user
       if (updateTemplate && state.templateId != null) {
         await repo.syncTemplateWithSession(state.templateId!, exData);
-        ref.invalidate(workoutTemplatesProvider); // Refresh daftar template di beranda
+        ref.invalidate(
+          workoutTemplatesProvider,
+        ); // Refresh daftar template di beranda
       }
-      
+
       state = state.copyWith(isSaving: false);
-      
+
       return SessionSummaryArgs(
         workoutName: state.workoutName,
         durationSeconds: state.elapsedSeconds,
         totalVolume: totalVolume,
         completedSets: setsDone,
-        prMessages: List<String>.from(result['pr_messages']),
+        prMessages: prList, // <-- Menggunakan list PR yang berhasil kita cek
       );
-
     } catch (e) {
       state = state.copyWith(isSaving: false);
-      return null; 
+      return null;
     }
   }
 }
 
-final activeSessionProvider = NotifierProvider<ActiveSessionNotifier, ActiveSessionState>(() {
-  return ActiveSessionNotifier();
-});
+final activeSessionProvider =
+    NotifierProvider<ActiveSessionNotifier, ActiveSessionState>(() {
+      return ActiveSessionNotifier();
+    });
