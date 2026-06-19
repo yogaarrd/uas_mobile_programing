@@ -38,15 +38,16 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
             return _buildEmptyState();
           }
 
-          // Filter data minimal 3 bulan terakhir sesuai AC
+          // === LOGIKA PERSONAL RECORD (PR) ===
+          // Cari angka maxWeight paling besar dari seluruh history
+          final prWeight = points.map((p) => p.maxWeight).reduce(max);
+          final prFormatted = prWeight.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+
           final standardCutoff = DateTime.now().subtract(const Duration(days: 90));
-          // Jika data history totalnya banyak, kita potong 90 hari, 
-          // tapi jika datanya sedikit, tampilkan semua agar grafik tidak kosong.
           final displayPoints = points.any((p) => p.date.isBefore(standardCutoff))
               ? points.where((p) => p.date.isAfter(standardCutoff)).toList()
               : points;
 
-          // Tabel riwayat di bawah diurutkan dari yang TERBARU ke TERLAMA (kebalikan dari grafik)
           final tableHistory = List<ExerciseProgressPoint>.from(points).reversed.toList();
 
           return SingleChildScrollView(
@@ -54,20 +55,50 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Grafik Kekuatan (Max Weight)',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                // ==========================================
+                // FITUR BARU: BANNER PERSONAL RECORD [PRG-03]
+                // ==========================================
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.amber, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.amber.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: Colors.amber.withOpacity(0.15), shape: BoxShape.circle),
+                        child: const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Personal Record (PR)', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text('$prFormatted kg', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 32),
+
+                // ==========================================
+                // KONTEN GRAFIK FL_CHART
+                // ==========================================
+                const Text('Grafik Kekuatan (Max Weight)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text(
                   points.any((p) => p.date.isBefore(standardCutoff)) ? 'Menampilkan data 3 bulan terakhir' : 'Menampilkan semua histori latihan',
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
-                const SizedBox(height: 24),
-
-                // ==========================================
-                // KONTEN UTAMA: BOX GRAFIK FL_CHART
-                // ==========================================
+                const SizedBox(height: 16),
                 Container(
                   height: 240,
                   padding: const EdgeInsets.only(right: 24, left: 8, top: 12, bottom: 12),
@@ -76,19 +107,14 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.grey.shade800),
                   ),
-                  child: LineChart(
-                    _getChartData(displayPoints),
-                  ),
+                  child: LineChart(_getChartData(displayPoints)),
                 ),
                 const SizedBox(height: 36),
 
                 // ==========================================
-                // KONTEN KEDUA: TABEL HISTORIS LENGKAP
+                // KONTEN TABEL HISTORIS
                 // ==========================================
-                const Text(
-                  'Catatan Historis Lengkap',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('Catatan Historis Lengkap', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
@@ -99,13 +125,12 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
                   clipBehavior: Clip.hardEdge,
                   child: Table(
                     columnWidths: const {
-                      0: FlexColumnWidth(2.5), // Tanggal
-                      1: FlexColumnWidth(2.0), // Max Weight
-                      2: FlexColumnWidth(1.5), // Sets
-                      3: FlexColumnWidth(1.5), // Reps
+                      0: FlexColumnWidth(2.5),
+                      1: FlexColumnWidth(2.0),
+                      2: FlexColumnWidth(1.5),
+                      3: FlexColumnWidth(1.5),
                     },
                     children: [
-                      // Header Tabel
                       TableRow(
                         decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
                         children: const [
@@ -115,14 +140,17 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
                           _TableCell(text: 'Reps', isHeader: true),
                         ],
                       ),
-                      // Baris Data Looping
                       ...tableHistory.map((p) {
                         final dateStr = DateFormat('dd MMM yyyy').format(p.date);
                         final dayName = DateFormat('EEEE').format(p.date);
                         final weightFormatted = p.maxWeight.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
                         
+                        // Highlight baris jika berat ini adalah PR!
+                        final isPR = p.maxWeight == prWeight;
+
                         return TableRow(
                           decoration: BoxDecoration(
+                            color: isPR ? Colors.amber.withOpacity(0.05) : null,
                             border: Border(bottom: BorderSide(color: Colors.grey.shade900)),
                           ),
                           children: [
@@ -131,12 +159,20 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(dateStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                                  Row(
+                                    children: [
+                                      Text(dateStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                                      if (isPR) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.star, color: Colors.amber, size: 12),
+                                      ]
+                                    ],
+                                  ),
                                   Text(dayName, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                                 ],
                               ),
                             ),
-                            _TableCell(text: '$weightFormatted kg', color: AppTheme.neonGreen),
+                            _TableCell(text: '$weightFormatted kg', color: isPR ? Colors.amber : AppTheme.neonGreen),
                             _TableCell(text: '${p.totalSets}'),
                             _TableCell(text: '${p.totalReps}'),
                           ],
@@ -156,21 +192,17 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
     );
   }
 
-  // LOGIKA CONFIGURASI FL_CHART GRAFIK GARIS NEON
+  // LOGIKA CONFIGURASI FL_CHART TETAP SAMA SEPERTI MILIKMU
   LineChartData _getChartData(List<ExerciseProgressPoint> displayPoints) {
-    // Buat koordinat spot (X, Y)
-    // X = indeks urutan latihan (0, 1, 2...) agar spasi titik seimbang
-    // Y = berat maksimal kg
     List<FlSpot> spots = [];
     for (int i = 0; i < displayPoints.length; i++) {
       spots.add(FlSpot(i.toDouble(), displayPoints[i].maxWeight));
     }
 
-    // Hitung batas Y agar garis tidak mentok ke atas/bawah frame grafik (Padding Visual)
     double maxWeight = displayPoints.map((p) => p.maxWeight).reduce(max);
     double minWeight = displayPoints.map((p) => p.maxWeight).reduce(min);
     double yPadding = (maxWeight - minWeight) * 0.2;
-    if (yPadding == 0) yPadding = 10; // Fallback jika beratnya sama semua
+    if (yPadding == 0) yPadding = 10;
 
     return LineChartData(
       gridData: FlGridData(
@@ -180,28 +212,21 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
       ),
       titlesData: FlTitlesData(
         show: true,
-        // Dihapus const agar kompatibel dengan fl_chart v1.2.0
         rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        // Sumbu Y (Berat KG)
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 38,
             getTitlesWidget: (value, meta) {
-              return Text(
-                '${value.toInt()}k',
-                style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
-              );
+              return Text('${value.toInt()}k', style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold));
             },
           ),
         ),
-        // Sumbu X (Tanggal Sesi)
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 24,
-            // Mengatur interval kemunculan teks tanggal agar tidak berhimpitan jika datanya banyak
             interval: max(1, (displayPoints.length / 4).floor()).toDouble(),
             getTitlesWidget: (value, meta) {
               final index = value.toInt();
@@ -209,10 +234,7 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
                 final date = displayPoints[index].date;
                 return Padding(
                   padding: const EdgeInsets.only(top: 6.0),
-                  child: Text(
-                    DateFormat('dd/MM').format(date),
-                    style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text(DateFormat('dd/MM').format(date), style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
                 );
               }
               return const SizedBox.shrink();
@@ -228,27 +250,17 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
       lineBarsData: [
         LineChartBarData(
           spots: spots,
-          isCurved: true, // Membuat garis melengkung smooth premium
+          isCurved: true,
           color: AppTheme.neonGreen,
           barWidth: 3,
           isStrokeCapRound: true,
-          // IMPLEMENTASI BARU UNTUK DOT DATA DI FL_CHART 1.2.0
           dotData: FlDotData(
             show: true,
-            getDotPainter: (spot, percent, barData, index) {
-              return FlDotCirclePainter(
-                radius: 4.0,
-                color: Colors.black,
-                strokeWidth: 2.0,
-                strokeColor: AppTheme.neonGreen,
-              );
-            },
+            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+              radius: 4.0, color: Colors.black, strokeWidth: 2.0, strokeColor: AppTheme.neonGreen,
+            ),
           ),
-          // Efek warna gradasi di bawah garis chart
-          belowBarData: BarAreaData(
-            show: true,
-            color: AppTheme.neonGreen.withOpacity(0.1),
-          ),
+          belowBarData: BarAreaData(show: true, color: AppTheme.neonGreen.withOpacity(0.1)),
         ),
       ],
     );
@@ -268,7 +280,6 @@ class ExerciseProgressDetailPage extends ConsumerWidget {
   }
 }
 
-// === HELPER WIDGET CELL TABEL ===
 class _TableCell extends StatelessWidget {
   final String text;
   final bool isHeader;
