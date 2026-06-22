@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Kita jadikan variabel agar mudah dipanggil
-  static const Color neonGreen = Color(0xFFD5FF5F);
-  static const Color darkBackground = Color(0xFF14141C);
+  static const Color neonGreen = Color.fromARGB(255, 207, 255, 75);
+  static const Color darkBackground = Color.fromARGB(255, 1, 1, 2);
   
   // Warna untuk elemen yang mengambang di atas background (seperti bottom nav)
-  static const Color surfaceColor = Color(0xFF1E1E26); 
+  static const Color surfaceColor = Color.fromARGB(255, 22, 22, 29); 
 
   static ThemeData get darkTheme {
     return ThemeData(
