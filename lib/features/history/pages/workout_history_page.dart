@@ -68,16 +68,15 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
         data: (sessions) {
           return Column(
             children: [
-              // 1. Komponen Kalender Bulanan yang sudah direvisi tingginya
+              // 1. Komponen Kalender Bulanan
               SizedBox(
-                height:
-                    320, // Membatasi tinggi kalender agar tidak memakan layar
+                height: 320, 
                 child: TableCalendar(
                   firstDay: DateTime.utc(2025, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
                   focusedDay: _focusedDay,
                   calendarFormat: CalendarFormat.month,
-                  rowHeight: 40, // Membuat baris tanggal lebih rapat
+                  rowHeight: 40, 
                   selectedDayPredicate: (day) => isSameDay(selectedDay, day),
                   onDaySelected: (selectedDateTime, focusedDateTime) {
                     setState(() => _focusedDay = focusedDateTime);
@@ -89,11 +88,44 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
                     final events = ref.watch(workoutDatesProvider).value ?? {};
                     return events[DateTime(day.year, day.month, day.day)] ?? [];
                   },
+                  
+                  // ==========================================
+                  // REVISI DOSEN: BUILDER KUSTOM UNTUK BULATAN
+                  // ==========================================
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, events) {
+                      if (events.isNotEmpty) {
+                        final isSelected = isSameDay(selectedDay, day);
+                        return Positioned(
+                          bottom: 4,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              width: 6.0,
+                              height: 6.0,
+                              decoration: BoxDecoration(
+                                // LOGIKA WARNA: Jika diklik jadi Putih, kalau nggak ya tetap Neon
+                                color: isSelected ? Colors.white : AppTheme.neonGreen, 
+                                shape: BoxShape.circle,
+                                // LOGIKA BORDER: Jika diklik kasih border tipis 0.5px
+                                border: isSelected
+                                    ? Border.all(
+                                        color: AppTheme.darkBackground, 
+                                        width: 0.5, 
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+                  
                   calendarStyle: const CalendarStyle(
-                    markerDecoration: BoxDecoration(
-                      color: AppTheme.neonGreen,
-                      shape: BoxShape.circle,
-                    ),
                     todayDecoration: BoxDecoration(
                       color: Colors.white24,
                       shape: BoxShape.circle,
@@ -101,6 +133,12 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
                     selectedDecoration: BoxDecoration(
                       color: AppTheme.neonGreen,
                       shape: BoxShape.circle,
+                    ),
+                    // Teks tanggal menjadi hitam pekat saat di-select
+                    selectedTextStyle: TextStyle(
+                      color: Colors.black, 
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold, 
                     ),
                     defaultTextStyle: TextStyle(
                       color: Colors.white,
@@ -114,8 +152,7 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
                   headerStyle: const HeaderStyle(
                     formatButtonVisible: false,
                     titleCentered: true,
-                    headerPadding:
-                        EdgeInsets.zero, // Menghilangkan padding header
+                    headerPadding: EdgeInsets.zero, 
                     titleTextStyle: TextStyle(
                       color: Colors.white,
                       fontSize: 14,
@@ -177,7 +214,6 @@ class _WorkoutHistoryPageState extends ConsumerState<WorkoutHistoryPage> {
     );
   }
 
-  // --- Helper Widgets tetap sama ---
   Widget _buildEmptyState(bool isFiltered) {
     return Center(
       child: Column(
