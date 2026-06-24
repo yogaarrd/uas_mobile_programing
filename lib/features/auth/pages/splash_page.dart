@@ -53,14 +53,14 @@ class _SplashPageState extends State<SplashPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.fitness_center,
-              size: 100,
-              color: AppTheme.neonGreen,
+            Image.asset(
+             'assets/image/MorepsLogo.png', // Sesuaikan path-nya
+              width: 300,
+              height: 300,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 10),
             Text(
-              'GymApp',
+              'Moreps',
               style: textTheme.headlineLarge?.copyWith(
                 color: AppTheme.neonGreen,
                 letterSpacing: 2.0,

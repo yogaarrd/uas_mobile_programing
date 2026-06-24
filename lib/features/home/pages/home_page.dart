@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart'; 
-import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider; 
+import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/bottom_nav_provider.dart'; // Import provider navigasi
-import '../../workout/providers/workout_provider.dart'; 
+import '../../workout/providers/workout_provider.dart';
 import '../../workout/models/workout_template.dart';
-import '../../auth/providers/auth_provider.dart'; 
-import '../../profile/providers/profile_provider.dart'; 
+import '../../auth/providers/auth_provider.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../../../features/workout/pages/exercise_library_page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -19,7 +19,6 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-
   @override
   void initState() {
     super.initState();
@@ -56,13 +55,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                     : const SizedBox.shrink();
               },
             ),
-            
+
             appBar: AppBar(
               backgroundColor: AppTheme.darkBackground,
               elevation: 0,
-              title: const Text(
-                'GymApp',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/image/MorepsLogo.png', // Logo kecil untuk AppBar
+                    height: 60, // Sesuaikan tinggi agar pas di AppBar
+                  ),
+                  // Jarak antara logo dan teks
+                  const Text(
+                    'Moreps',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
               actions: [
                 IconButton(
@@ -83,7 +93,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ],
               ),
             ),
-            
+
             body: const TabBarView(
               children: [MyWorkoutsView(), ExerciseLibraryTab()],
             ),
@@ -110,8 +120,18 @@ class MyWorkoutsView extends ConsumerWidget {
   String _getFormattedDate() {
     final now = DateTime.now();
     final months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
@@ -124,7 +144,7 @@ class MyWorkoutsView extends ConsumerWidget {
 
     String userName = 'Fighter';
     if (profile != null) {
-      userName = profile.fullName.split(' ')[0]; 
+      userName = profile.fullName.split(' ')[0];
     } else {
       final email = Supabase.instance.client.auth.currentUser?.email;
       if (email != null) userName = email.split('@')[0];
@@ -138,7 +158,10 @@ class MyWorkoutsView extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-              child: _buildPremiumGreetingCard(ref, userName), // Berikan parameter ref di sini
+              child: _buildPremiumGreetingCard(
+                ref,
+                userName,
+              ), // Berikan parameter ref di sini
             ),
           ),
 
@@ -162,36 +185,42 @@ class MyWorkoutsView extends ConsumerWidget {
                 return SliverToBoxAdapter(child: _buildEmptyState(context));
               }
               return SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: _WorkoutTemplateCard(template: templates[index]),
-                      );
-                    },
-                    childCount: templates.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: _WorkoutTemplateCard(template: templates[index]),
+                    );
+                  }, childCount: templates.length),
                 ),
               );
             },
             loading: () => const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(40.0),
-                child: Center(child: CircularProgressIndicator(color: AppTheme.neonGreen)),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppTheme.neonGreen),
+                ),
               ),
             ),
             error: (error, stack) => SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(40.0),
                 child: Center(
-                  child: Text('Terjadi kesalahan:\n$error', textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    'Terjadi kesalahan:\n$error',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
               ),
             ),
           ),
-          
+
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
@@ -205,10 +234,7 @@ class MyWorkoutsView extends ConsumerWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [
-            AppTheme.neonGreen,
-            Color(0xFF9EBA00), 
-          ],
+          colors: [AppTheme.neonGreen, Color(0xFF9EBA00)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -217,7 +243,7 @@ class MyWorkoutsView extends ConsumerWidget {
             color: AppTheme.neonGreen.withOpacity(0.25),
             blurRadius: 20,
             offset: const Offset(0, 8),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -228,9 +254,11 @@ class MyWorkoutsView extends ConsumerWidget {
             _getFormattedDate(),
             style: TextStyle(
               fontFamily: 'Poppins',
-              color: Colors.black87.withOpacity(0.6), // Warna agak redup agar tidak mengalahkan sapaan
+              color: Colors.black87.withOpacity(
+                0.6,
+              ), // Warna agak redup agar tidak mengalahkan sapaan
               fontSize: 12,
-              fontWeight: FontWeight.w700, 
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),
           ),
@@ -243,12 +271,12 @@ class MyWorkoutsView extends ConsumerWidget {
               fontFamily: 'Poppins',
               color: Colors.black87,
               fontSize: 16,
-              fontWeight: FontWeight.w600, 
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
             ),
           ),
           const SizedBox(height: 2),
-          
+
           // 3. NAMA (Extra Bold / Black) - Dipertebal dengan w900 & spasinya dirapatkan
           Text(
             'Hello, $userName!',
@@ -256,24 +284,29 @@ class MyWorkoutsView extends ConsumerWidget {
               fontFamily: 'Poppins',
               color: Colors.black,
               fontSize: 32,
-              fontWeight: FontWeight.w900, // <-- EXTRA BOLD (Pastikan poppins terdaftar di pubspec.yaml)
-              letterSpacing: -1.0, 
+              fontWeight: FontWeight
+                  .w900, // <-- EXTRA BOLD (Pastikan poppins terdaftar di pubspec.yaml)
+              letterSpacing: -1.0,
               height: 1.1,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // 4. MOTIVASI, ICON & TOMBOL (Dark Glassmorphism)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.65), // Background kaca gelap (Dark Glass)
+              color: Colors.black.withOpacity(
+                0.65,
+              ), // Background kaca gelap (Dark Glass)
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.black.withOpacity(0.8), // Pinggiran border lebih pekat
+                color: Colors.black.withOpacity(
+                  0.8,
+                ), // Pinggiran border lebih pekat
                 width: 1.0,
               ),
             ),
@@ -283,7 +316,8 @@ class MyWorkoutsView extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: const BoxDecoration(
-                    color: AppTheme.neonGreen, // Warna background ikon neon green
+                    color:
+                        AppTheme.neonGreen, // Warna background ikon neon green
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -293,7 +327,7 @@ class MyWorkoutsView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Teks motivasi berwarna Neon
                 const Expanded(
                   child: Text(
@@ -307,7 +341,7 @@ class MyWorkoutsView extends ConsumerWidget {
                     ),
                   ),
                 ),
-                
+
                 // --- TOMBOL BARU: CEK REKOR ---
                 GestureDetector(
                   onTap: () {
@@ -315,7 +349,10 @@ class MyWorkoutsView extends ConsumerWidget {
                     ref.read(bottomNavIndexProvider.notifier).changeIndex(2);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.neonGreen,
                       borderRadius: BorderRadius.circular(20),
@@ -334,8 +371,8 @@ class MyWorkoutsView extends ConsumerWidget {
                         ),
                         SizedBox(width: 4),
                         Icon(
-                          Icons.arrow_forward_rounded, 
-                          color: Colors.black, 
+                          Icons.arrow_forward_rounded,
+                          color: Colors.black,
                           size: 14,
                         ),
                       ],
@@ -358,7 +395,11 @@ class MyWorkoutsView extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.fitness_center, size: 80, color: Colors.grey.withOpacity(0.5)),
+            Icon(
+              Icons.fitness_center,
+              size: 80,
+              color: Colors.grey.withOpacity(0.5),
+            ),
             const SizedBox(height: 16),
             const Text(
               'Belum ada template latihan',
@@ -368,13 +409,24 @@ class MyWorkoutsView extends ConsumerWidget {
             ElevatedButton.icon(
               onPressed: () => context.push('/create-workout'),
               icon: const Icon(Icons.add, color: Colors.black),
-              label: const Text('Buat Template Pertama', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Buat Template Pertama',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.neonGreen,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -392,7 +444,10 @@ class _WorkoutTemplateCard extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Hapus Workout?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Hapus Workout?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'Apakah kamu yakin ingin menghapus template "${template.name}"?\nData yang dihapus tidak dapat dikembalikan.',
           style: const TextStyle(color: Colors.grey),
@@ -404,7 +459,13 @@ class _WorkoutTemplateCard extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -415,28 +476,39 @@ class _WorkoutTemplateCard extends ConsumerWidget {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.neonGreen)),
+          builder: (_) => const Center(
+            child: CircularProgressIndicator(color: AppTheme.neonGreen),
+          ),
         );
 
         final repo = ref.read(workoutRepositoryProvider);
         await repo.deleteWorkoutTemplate(template.id);
-        
+
         if (!context.mounted) return;
-        Navigator.pop(context); 
+        Navigator.pop(context);
 
         ref.invalidate(workoutTemplatesProvider);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Workout berhasil dihapus', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)), 
+            content: Text(
+              'Workout berhasil dihapus',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             backgroundColor: AppTheme.neonGreen,
             duration: Duration(seconds: 2),
           ),
         );
       } catch (e) {
-        if (context.mounted) Navigator.pop(context); 
+        if (context.mounted) Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menghapus: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text('Gagal menghapus: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -465,7 +537,11 @@ class _WorkoutTemplateCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     template.name,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 Row(
@@ -475,10 +551,14 @@ class _WorkoutTemplateCard extends ConsumerWidget {
                       icon: const Icon(Icons.edit_note, color: Colors.grey),
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.only(right: 12),
-                      onPressed: () => context.push('/create-workout?id=${template.id}'),
+                      onPressed: () =>
+                          context.push('/create-workout?id=${template.id}'),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.redAccent,
+                      ),
                       constraints: const BoxConstraints(),
                       padding: EdgeInsets.zero,
                       onPressed: () => _handleDelete(context, ref),
@@ -487,7 +567,8 @@ class _WorkoutTemplateCard extends ConsumerWidget {
                 ),
               ],
             ),
-            if (template.description != null && template.description!.isNotEmpty) ...[
+            if (template.description != null &&
+                template.description!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
                 template.description!,
@@ -500,11 +581,17 @@ class _WorkoutTemplateCard extends ConsumerWidget {
             Row(
               children: [
                 Flexible(
-                  child: _buildBadge(Icons.format_list_bulleted, '${template.exerciseCount} Latihan'),
+                  child: _buildBadge(
+                    Icons.format_list_bulleted,
+                    '${template.exerciseCount} Latihan',
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Flexible(
-                  child: _buildBadge(Icons.timer_outlined, '~ $estimatedTime mnt'),
+                  child: _buildBadge(
+                    Icons.timer_outlined,
+                    '~ $estimatedTime mnt',
+                  ),
                 ),
               ],
             ),
@@ -512,7 +599,9 @@ class _WorkoutTemplateCard extends ConsumerWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: template.muscleGroups.map((m) => _buildMuscleChip(m)).toList(),
+              children: template.muscleGroups
+                  .map((m) => _buildMuscleChip(m))
+                  .toList(),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -522,11 +611,17 @@ class _WorkoutTemplateCard extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.neonGreen,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text(
-                  'Start Workout', 
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 16),
+                  'Start Workout',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
@@ -554,7 +649,11 @@ class _WorkoutTemplateCard extends ConsumerWidget {
       ),
       child: Text(
         muscle.toUpperCase(),
-        style: const TextStyle(color: AppTheme.neonGreen, fontSize: 10, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          color: AppTheme.neonGreen,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

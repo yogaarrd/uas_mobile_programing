@@ -253,7 +253,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
               const SizedBox(width: 12),
               const Text(
-                'GymApp',
+                'Moreps',
                 style: TextStyle(
                   color: AppTheme.neonGreen,
                   fontSize: 20,
