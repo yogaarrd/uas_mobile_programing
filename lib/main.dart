@@ -114,7 +114,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp.router(
-        title: 'GymApp',
+        title: 'Moreps',
         theme: AppTheme.darkTheme,
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
