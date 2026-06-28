@@ -125,31 +125,31 @@ class ExerciseDetailPage extends StatelessWidget {
         ),
       ),
       
-      // 5. Tombol Add to Workout (Hanya UI sesuai AC)
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonGreen,
-              foregroundColor: Colors.black,
-              minimumSize: const Size(double.infinity, 54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur Add to Workout segera hadir!')),
-              );
-            },
-            child: const Text(
-              'Add to Workout',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ),
+      // // 5. Tombol Add to Workout (Hanya UI sesuai AC)
+      // bottomNavigationBar: SafeArea(
+      //   child: Padding(
+      //     padding: const EdgeInsets.all(16.0),
+      //     child: ElevatedButton(
+      //       style: ElevatedButton.styleFrom(
+      //         backgroundColor: AppTheme.neonGreen,
+      //         foregroundColor: Colors.black,
+      //         minimumSize: const Size(double.infinity, 54),
+      //         shape: RoundedRectangleBorder(
+      //           borderRadius: BorderRadius.circular(12),
+      //         ),
+      //       ),
+      //       onPressed: () {
+      //         ScaffoldMessenger.of(context).showSnackBar(
+      //           const SnackBar(content: Text('Fitur Add to Workout segera hadir!')),
+      //         );
+      //       },
+      //       child: const Text(
+      //         'Add to Workout',
+      //         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      //       ),
+      //     ),
+      //   ),
+      // ),
     );
   }
 

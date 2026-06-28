@@ -101,18 +101,18 @@ class SessionSummaryPage extends StatelessWidget {
               ],
 
               // BUTTONS
-              OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Membuka menu share perangkat...')));
-                },
-                icon: const Icon(Icons.share, color: Colors.white),
-                label: const Text('Bagikan ke Teman', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                  side: const BorderSide(color: Colors.grey),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
+              // OutlinedButton.icon(
+              //   onPressed: () {
+              //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Membuka menu share perangkat...')));
+              //   },
+              //   icon: const Icon(Icons.share, color: Colors.white),
+              //   label: const Text('Bagikan ke Teman', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              //   style: OutlinedButton.styleFrom(
+              //     minimumSize: const Size.fromHeight(54),
+              //     side: const BorderSide(color: Colors.grey),
+              //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              //   ),
+              // ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.go('/home'),
