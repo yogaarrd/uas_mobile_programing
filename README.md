@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/image/MorepsLogo.png" alt="Moreps Logo" width="180"/>
+<img src="assets/image/MorepsLogo.png" alt="Moreps Logo" width="280"/>
 
 # 💪 MOREPS
 
