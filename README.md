@@ -237,8 +237,91 @@ cat > .env << EOF
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 EOF
+```
 
-# 4. Jalankan aplikasi
+### Setup Database Supabase
+
+Buka **Supabase Dashboard → SQL Editor**, lalu jalankan file SQL dari folder `SQL/` dengan urutan berikut:
+
+#### 📋 Tahap 1 — Import Tabel (sesuai urutan)
+
+| Urutan | File | Keterangan |
+|:---:|:---|:---|
+| 1️⃣ | `SQL/table/table_profiles_supabase.sql` | Tabel profil pengguna |
+| 2️⃣ | `SQL/table/table_excercise_supabase.sql` | Tabel daftar gerakan latihan |
+| 3️⃣ | `SQL/table/storage_avatars_supabase.sql` | Konfigurasi Supabase Storage untuk avatar |
+| 4️⃣ | `SQL/table/table_workout_template.sql` | Tabel template & detail workout |
+| 5️⃣ | `SQL/table/table_workout_sessions.sql` | Tabel sesi latihan & history |
+| 6️⃣ | `SQL/table/table_body_measurements.sql` | Tabel pencatatan berat badan |
+
+> ⚠️ **Penting:** Urutan import harus sesuai karena terdapat relasi *foreign key* antar tabel.
+
+#### 🌱 Tahap 2 — Import Seeder
+
+| File | Keterangan |
+|:---|:---|
+| `SQL/seeder/seeder_excercise.sql` | Data awal daftar gerakan latihan (exercise library) |
+| `SQL/seeder/seeder_progress_tracking.sql` | Data awal untuk progress tracking |
+
+### 🔑 Setup Google OAuth Login
+
+Agar fitur **Login dengan Google** berfungsi, ikuti langkah-langkah berikut:
+
+#### 1. Aktifkan Google Provider di Supabase
+
+1. Buka **Supabase Dashboard** → **Authentication** → **Providers**
+2. Cari dan aktifkan **Google**
+3. Anda akan membutuhkan **Client ID** dan **Client Secret** dari Google Cloud Console
+
+#### 2. Buat OAuth Credentials di Google Cloud Console
+
+1. Buka [Google Cloud Console](https://console.cloud.google.com/)
+2. Buat project baru atau pilih project yang sudah ada
+3. Navigasi ke **APIs & Services** → **Credentials**
+4. Klik **Create Credentials** → **OAuth Client ID**
+5. Pilih **Web application** sebagai application type
+6. Tambahkan **Authorized redirect URI** dari Supabase:
+   ```
+   https://<YOUR_SUPABASE_PROJECT>.supabase.co/auth/v1/callback
+   ```
+7. Copy **Client ID** dan **Client Secret**, lalu paste ke konfigurasi Google Provider di Supabase Dashboard
+
+#### 3. Konfigurasi Redirect URL di Supabase
+
+1. Buka **Supabase Dashboard** → **Authentication** → **URL Configuration**
+2. Tambahkan deep link berikut ke **Redirect URLs**:
+   ```
+   io.supabase.gymapp://login-callback/
+   ```
+
+#### 4. Konfigurasi Deep Link Android
+
+Deep link sudah dikonfigurasi di `AndroidManifest.xml` dengan scheme:
+
+```xml
+<data android:scheme="io.supabase.gymapp" android:host="login-callback" />
+```
+
+#### 5. Konfigurasi untuk Web (`flutter run -d chrome`)
+
+Jika menjalankan aplikasi di **web**, tambahkan konfigurasi berikut:
+
+1. Buka **Supabase Dashboard** → **Authentication** → **URL Configuration**
+2. Set **Site URL** ke URL aplikasi web Anda:
+   ```
+   http://localhost:PORT
+   ```
+   > Ganti `PORT` dengan port yang digunakan Flutter web (default biasanya `port random`, cek di terminal saat `flutter run -d chrome`)
+3. Tambahkan juga URL tersebut ke **Redirect URLs**:
+   ```
+   http://localhost:PORT
+   ```
+
+> **📝 Catatan:** Pastikan scheme pada `AndroidManifest.xml`, Supabase Redirect URLs, dan kode `auth_service.dart` konsisten. Untuk **mobile** gunakan `io.supabase.gymapp://login-callback/`, untuk **web** gunakan Site URL yang sudah dikonfigurasi.
+
+### Jalankan Aplikasi
+
+```bash
 flutter run
 ```
 
@@ -357,17 +440,9 @@ flutter run
 
 <div align="center">
 
-### 📄 Dokumen Terkait
-
-| Dokumen | Link |
-|:---:|:---:|
-| 📖 Product Requirements Document | [PRD.md](PRD.md) |
-| 👥 Profile Pengembang | [Profile_Pengembang.md](Profile_Pengembang.md) |
-
----
 
 <sub>Built with 💚 using Flutter & Supabase</sub>
 
-<sub>© 2026 Moreps Team — UAS Mobile Programming</sub>
+<sub>© 2026 Moreps Team</sub>
 
 </div>
