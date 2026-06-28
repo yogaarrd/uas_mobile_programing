@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -34,7 +35,7 @@ class AuthService {
   Future<bool> signInWithGoogle() async {
     return await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'io.supabase.gymapp://login-callback/', // Deep link callback
+      redirectTo: kIsWeb ? null : 'io.supabase.gymapp://login-callback/', // Deep link callback
     );
   }
 
