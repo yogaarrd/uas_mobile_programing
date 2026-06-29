@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/image/MorepsLogo.png" alt="Moreps Logo" width="180"/>
+<img src="assets/image/MorepsLogo_Readme.png" alt="Moreps Logo" width="180"/>
 
 # 💪 MOREPS
 
@@ -17,7 +17,7 @@
 
 <br/>
 
-[📖 Dokumentasi PRD](PRD.md) · [🎬 Demo Video](#-demo-video) · [📸 Screenshots](#-screenshot-halaman)
+[📖 Dokumentasi PRD](PRD.md) · [🎬 Demo Video](#-demo-video) · [📸 Screenshots](#-screenshot-halaman) · [🔗 Official Website](https://moreps.vercel.app/)
 
 ---
 
