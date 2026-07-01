@@ -32,13 +32,25 @@ import 'features/progress/pages/exercise_progress_detail_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id', null); // Inisialisasi locale Indonesia
-  await NotificationService.init();
-  await dotenv.load(fileName: ".env");
-
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
+  try {
+    await NotificationService.init();
+  } catch (e) {
+    debugPrint('⚠️ NotificationService.init() GAGAL: $e');
+    // Lanjut saja, jangan crash total
+  }
+  try {
+    await dotenv.load(fileName: ".env");
+    await Supabase.initialize(
+      // url: '',
+      // anonKey: '',
+      url: dotenv.env['SUPABASE_URL'] ?? '',
+      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    );
+  } catch (e, st) {
+    debugPrint('Gagal load env/Supabase: $e\n$st');
+    // tetap lanjut runApp supaya tidak white screen total,
+    // nanti app bisa tampilkan halaman error yang jelas
+  }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
     debugPrint(details.exceptionAsString());
@@ -103,11 +115,11 @@ final GoRouter _router = GoRouter(
   ],
 );
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
-// 1. Class AuthProvider tetap di luar
+
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -19,13 +19,15 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _clearError() {
+  // ✅ FIX: Jadikan public agar bisa dipanggil dari luar (LoginPage, RegisterPage)
+  void clearError() {
     _errorMessage = null;
+    notifyListeners();
   }
 
   Future<bool> register(String email, String password, String name) async {
     _setLoading(true);
-    _clearError();
+    clearError();
     try {
       await _authService.signUp(email: email, password: password, name: name);
       _setLoading(false);
@@ -43,7 +45,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> login(String email, String password) async {
     _setLoading(true);
-    _clearError();
+    clearError();
     try {
       await _authService.signIn(email: email, password: password);
       _setLoading(false);
@@ -61,7 +63,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> loginWithGoogle() async {
     _setLoading(true);
-    _clearError();
+    clearError();
     try {
       final success = await _authService.signInWithGoogle();
       _setLoading(false);
@@ -82,8 +84,3 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-
-// // 2. Provider Riverpod ditaruh DI LUAR class
-// final authProvider = ChangeNotifierProvider <AuthProvider>((ref) {
-//   return AuthProvider();
-// });
