@@ -7,7 +7,6 @@ import '../providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../../shared/widgets/custom_input_field.dart';
 import '../../../shared/widgets/custom_button.dart';
-import '../../../shared/widgets/global_feedback.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,6 +21,9 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   late final StreamSubscription<AuthState> _authSubscription;
 
+  // ✅ Flag untuk mencegah navigasi ganda jika event auth terpicu berkali-kali
+  bool _isNavigating = false;
+
   @override
   void initState() {
     super.initState();
@@ -30,12 +32,16 @@ class _LoginPageState extends State<LoginPage> {
     ) async {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
-      if (event == AuthChangeEvent.signedIn && session != null) {
+
+      if (event == AuthChangeEvent.signedIn && session != null && !_isNavigating) {
+        _isNavigating = true;
         if (!mounted) return;
-        // Cek profil: jika belum ada → onboarding, jika sudah → home
+
         final profileProvider = context.read<ProfileProvider>();
         final hasProfile = await profileProvider.checkProfileExists(session.user.id);
+
         if (!mounted) return;
+
         if (hasProfile) {
           context.go('/home');
         } else {
@@ -53,41 +59,46 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = context.read<AuthProvider>();
-      await authProvider.login(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
+  // ✅ FIX: Pakai ?. untuk null-safe form validation, error ditampilkan via SnackBar
+  Future<void> _handleLogin() async {
+    // Bersihkan error lama sebelum mencoba lagi
+    context.read<AuthProvider>().clearError();
+
+    // Null-safe validation: kalau form tidak ada di tree, langsung return
+    if (_formKey.currentState?.validate() != true) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.login(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    // Tampilkan error sebagai SnackBar agar form TETAP terlihat
+    if (!success && authProvider.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage!),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }
 
-  void _handleGoogleLogin() async {
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.loginWithGoogle();
+  Future<void> _handleGoogleLogin() async {
+    context.read<AuthProvider>().clearError();
+    await context.read<AuthProvider>().loginWithGoogle();
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Hanya watch isLoading untuk disable tombol saat proses berlangsung
+    // TIDAK ada lagi if (errorMessage != null) return Scaffold(...) yang menghilangkan form!
     final authProvider = context.watch<AuthProvider>();
 
-    // 1. Error Handling State
-    if (authProvider.errorMessage != null) {
-      return Scaffold(
-        body: GlobalFeedback.errorMessage(
-          authProvider.errorMessage!,
-          () => _handleLogin(),
-        ),
-      );
-    }
-
-    // 2. Loading State (Full Screen)
-    if (authProvider.isLoading) {
-      return Scaffold(body: GlobalFeedback.loadingIndicator());
-    }
-
-    // 3. Main Login UI
     return Scaffold(
       appBar: AppBar(title: const Text('Masuk Aplikasi')),
       body: Padding(
@@ -112,20 +123,17 @@ class _LoginPageState extends State<LoginPage> {
                 validator: (v) => v!.isEmpty ? 'Masukkan password Anda' : null,
               ),
               const SizedBox(height: 32),
-
-              // Custom Button dengan state loading yang terintegrasi
               CustomButton(
                 text: 'Masuk',
                 onPressed: _handleLogin,
                 isLoading: authProvider.isLoading,
               ),
-
               const SizedBox(height: 16),
               const Text('ATAU', style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 16),
-
               OutlinedButton.icon(
-                onPressed: _handleGoogleLogin,
+                // Disable semua tombol saat loading berlangsung
+                onPressed: authProvider.isLoading ? null : _handleGoogleLogin,
                 icon: const Icon(Icons.g_mobiledata, size: 28),
                 label: const Text('Continue with Google'),
                 style: OutlinedButton.styleFrom(
@@ -137,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => context.go('/register'),
+                onPressed: authProvider.isLoading ? null : () => context.go('/register'),
                 child: const Text('Belum punya akun? Daftar sekarang'),
               ),
             ],

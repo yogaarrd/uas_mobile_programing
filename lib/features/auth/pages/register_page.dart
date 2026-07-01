@@ -6,7 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../../../shared/widgets/custom_input_field.dart';
 import '../../../shared/widgets/custom_button.dart';
-import '../../../shared/widgets/global_feedback.dart'; // Import feedback global
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -32,7 +31,6 @@ class _RegisterPageState extends State<RegisterPage> {
       final Session? session = data.session;
       if (event == AuthChangeEvent.signedIn && session != null) {
         if (mounted) {
-          // Setelah register berhasil, arahkan ke onboarding untuk isi profil
           context.go('/onboarding');
         }
       }
@@ -48,43 +46,44 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _handleRegister() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = context.read<AuthProvider>();
-      await authProvider.register(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-        _nameController.text.trim(),
+  // ✅ FIX: Null-safe form validation, error via SnackBar
+  Future<void> _handleRegister() async {
+    context.read<AuthProvider>().clearError();
+
+    if (_formKey.currentState?.validate() != true) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.register(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+      _nameController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (!success && authProvider.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage!),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
       );
-      // Navigasi ditangani oleh authSubscription di initState
     }
+    // Navigasi ke /onboarding ditangani oleh _authSubscription di initState
   }
 
-  void _handleGoogleLogin() async {
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.loginWithGoogle();
+  Future<void> _handleGoogleLogin() async {
+    context.read<AuthProvider>().clearError();
+    await context.read<AuthProvider>().loginWithGoogle();
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Form SELALU terlihat. Tidak ada lagi penggantian Scaffold saat error.
     final authProvider = context.watch<AuthProvider>();
 
-    // 1. Error State
-    if (authProvider.errorMessage != null) {
-      return Scaffold(
-        body: GlobalFeedback.errorMessage(
-          authProvider.errorMessage!,
-          () => _handleRegister(),
-        ),
-      );
-    }
-
-    // 2. Loading State
-    if (authProvider.isLoading) {
-      return Scaffold(body: GlobalFeedback.loadingIndicator());
-    }
-
-    // 3. UI Utama
     return Scaffold(
       appBar: AppBar(title: const Text('Buat Akun Baru')),
       body: Padding(
@@ -105,7 +104,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _emailController,
                   label: 'Email',
                   icon: Icons.email,
-                  validator: (v) => v!.isEmpty || !v.contains('@') ? 'Masukkan email yang valid' : null,
+                  validator: (v) =>
+                      v!.isEmpty || !v.contains('@') ? 'Masukkan email yang valid' : null,
                 ),
                 const SizedBox(height: 16),
                 CustomInputField(
@@ -116,30 +116,28 @@ class _RegisterPageState extends State<RegisterPage> {
                   validator: (v) => v!.length < 6 ? 'Password minimal 6 karakter' : null,
                 ),
                 const SizedBox(height: 32),
-                
-                // Tombol Daftar
                 CustomButton(
                   text: 'Daftar',
                   onPressed: _handleRegister,
                   isLoading: authProvider.isLoading,
                 ),
-                
                 const SizedBox(height: 16),
                 const Text('ATAU', style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 16),
-                
                 OutlinedButton.icon(
-                  onPressed: _handleGoogleLogin,
+                  onPressed: authProvider.isLoading ? null : _handleGoogleLogin,
                   icon: const Icon(Icons.g_mobiledata, size: 28),
                   label: const Text('Continue with Google'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => context.go('/login'),
+                  onPressed: authProvider.isLoading ? null : () => context.go('/login'),
                   child: const Text('Sudah punya akun? Login disini'),
                 ),
               ],

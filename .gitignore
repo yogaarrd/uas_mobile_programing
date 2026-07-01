@@ -49,3 +49,7 @@ app.*.map.json
 
 # Codebase Context
 /code_base_context/
+
+# Menyembunyikan konfigurasi kunci rilis Android
+android/key.properties
+android/app/keystore.jks
